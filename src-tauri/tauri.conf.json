@@ -35,6 +35,7 @@
   },
   "bundle": {
     "active": true,
+    "copyright": "Copyright © 2026 Nima Behkar (https://nimabehkar.ir)",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

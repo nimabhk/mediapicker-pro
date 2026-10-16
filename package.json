@@ -1,6 +1,17 @@
 {
-  "name": "ai-studio-applet",
-  "version": "0.1.0",
+  "name": "mediapicker-pro",
+  "version": "2.0.0",
+  "description": "High-speed local photo and video reviewer, fullscreen slideshow, and gallery culling studio.",
+  "author": {
+    "name": "Nima Behkar",
+    "url": "https://nimabehkar.ir"
+  },
+  "homepage": "https://nimabehkar.ir",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nimabhk/mediapicker-pro.git"
+  },
+  "license": "PolyForm-Noncommercial-1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
@@ -13,7 +24,6 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@google/genai": "^2.4.0",
     "@hookform/resolvers": "^5.2.1",
     "@tauri-apps/api": "^2.12.3",
     "@tauri-apps/plugin-clipboard-manager": "^2.4.2",

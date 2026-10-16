@@ -8,6 +8,7 @@ This directory contains the architecture documents, technical migration specific
 
 | File | Description |
 | :--- | :--- |
+| **`PROJECT_CONTEXT_HANDOVER.md`** | 🌟 **سند جامع انتقال و خلاصه وضعیت پروژه (Master Handover Document)** — شامل کل کارهای انجام شده، معماری، سیستم تم‌ها، تغییرات اخیر، جدول میانبرها و راهنمای سشن جدید. |
 | **`BLUEPRINT.md`** | Comprehensive software architecture blueprint detailing every feature, shortcut, UI layout, data model, state machine, and Rust/Tauri v2 module specification. |
 | **`BROWSER_VS_TAURI_FREEDOMS.md`** | Technical audit detailing the restrictions removed in the Tauri + Rust native desktop stack versus the browser sandbox (memory limits, direct disk streaming, native trash, instant batch copy/move). |
 | **`TAURI_SETUP_GUIDE.md`** | Step-by-step setup and installation instructions for running MediaPicker Pro in Tauri desktop mode on macOS, Windows, and Linux. |

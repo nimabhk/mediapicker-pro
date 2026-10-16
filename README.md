@@ -47,3 +47,17 @@ Detailed architectural documentation and guides are organized in the [`docs/`](.
 - [`docs/TAURI_SETUP_GUIDE.md`](./docs/TAURI_SETUP_GUIDE.md): Complete Tauri desktop setup guide
 - For launching native desktop mode: double-click `run-tauri.command` (macOS) or `run-tauri.bat` (Windows).
 
+## 👤 Author & Maintainer
+
+**Nima Behkar**
+- Website: [nimabehkar.ir](https://nimabehkar.ir)
+- GitHub: [@nimabhk](https://github.com/nimabhk)
+
+## 📄 License
+
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+- **Free for Noncommercial Use**: Personal projects, research, education, and non-commercial evaluation.
+- **Commercial Use Restricted**: Use for commercial advantage, integration into proprietary commercial products, or resale requires an explicit commercial license. Inquire at [nimabehkar.ir](https://nimabehkar.ir).
+
+
