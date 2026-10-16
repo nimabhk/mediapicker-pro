@@ -775,6 +775,15 @@ export function GalleryView({
   const currentTheme = getTheme(settings.activeThemeId, isDarkMode);
   const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
   const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const isPaperAtelier = currentTheme.id === 'theme-4-paper-atelier';
+  const isObsidian = currentTheme.id === 'theme-1-obsidian-culler';
+  const rimClass = isLiquidGlass
+    ? 'liquid-specular-rim'
+    : isCupertino
+    ? 'cupertino-vibrancy-rim'
+    : isPaperAtelier
+    ? 'paper-editorial-rim'
+    : 'obsidian-console-rim';
 
   const renderCard = (item: MediaFileItem, isNaturalAspect: boolean) => {
     const isSelected = item.selected;
@@ -811,24 +820,30 @@ export function GalleryView({
       };
     } else if (isLastViewed) {
       cardStateClass = 'scale-[1.01]';
+      const bookmarkColor = isPaperAtelier ? '#e07a5f' : 'rgba(251, 191, 36, 0.92)';
       cardOutlineStyle = {
         outline: isSelected
           ? `2.5px solid rgb(${currentTheme.palette.accentRgb})`
-          : '2px solid rgba(251, 191, 36, 0.9)',
-        outlineOffset: '-2px',
+          : `2px solid ${bookmarkColor}`,
+        outlineOffset: isObsidian ? '-3px' : '-2px',
         boxShadow: isSelected
-          ? `var(--theme-glow), var(--theme-card-shadow)`
+          ? isObsidian
+            ? `inset 0 0 0 1.5px #08090c, var(--theme-glow), var(--theme-card-shadow)`
+            : `var(--theme-glow), var(--theme-card-shadow)`
+          : isPaperAtelier
+          ? '0 0 16px rgba(224, 122, 95, 0.35), var(--theme-card-shadow)'
           : '0 0 18px rgba(251, 191, 36, 0.45), var(--theme-card-shadow)',
       };
     } else if (isSelected) {
       cardOutlineStyle = {
         outline:
-          currentTheme.id === 'theme-2-cupertino-frosted-pro' ||
-          currentTheme.id === 'theme-4-paper-atelier'
+          isCupertino || isPaperAtelier
             ? `2.5px solid rgb(${currentTheme.palette.accentRgb})`
             : `2px solid rgb(${currentTheme.palette.accentRgb})`,
-        outlineOffset: '-2px',
-        boxShadow: `var(--theme-glow), var(--theme-card-shadow)`,
+        outlineOffset: isObsidian ? '-3px' : '-2px',
+        boxShadow: isObsidian
+          ? `inset 0 0 0 1.5px #08090c, var(--theme-glow), var(--theme-card-shadow)`
+          : `var(--theme-glow), var(--theme-card-shadow)`,
       };
     }
 
@@ -868,7 +883,7 @@ export function GalleryView({
         }}
         className={`group relative overflow-hidden theme-card border cursor-pointer flex flex-col justify-between ${
           isNaturalAspect ? 'masonry-card mb-3' : 'aspect-square'
-        } ${isLiquidGlass ? 'liquid-specular-rim' : isCupertino ? 'cupertino-vibrancy-rim' : ''} ${cardStateClass}`}
+        } ${isPaperAtelier ? 'p-1.5 pb-8' : ''} ${rimClass} ${cardStateClass}`}
       >
         {}
         {!isRevealed ? (
@@ -972,9 +987,17 @@ export function GalleryView({
               </span>
             )}
             {isLastViewed && !isRangeAnchor && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-400 text-slate-950 shadow-md flex items-center gap-0.5">
-                <BookmarkCheck className="w-2.5 h-2.5 text-slate-950" />
-                Last Slide
+              <span
+                className={`px-1.5 py-0.5 text-[9px] font-bold shadow-md flex items-center gap-1 ${
+                  isPaperAtelier
+                    ? 'rounded-[2px] bg-[#e07a5f] text-white font-serif italic tracking-wide'
+                    : isObsidian
+                    ? 'rounded-[2px] bg-[#08090c]/90 text-amber-400 border border-amber-400/50 font-mono uppercase tracking-wider'
+                    : 'rounded bg-amber-400 text-slate-950'
+                }`}
+              >
+                <BookmarkCheck className="w-2.5 h-2.5 shrink-0" />
+                <span>{isPaperAtelier ? 'Bookmark' : 'Last Slide'}</span>
               </span>
             )}
           </div>
@@ -984,20 +1007,27 @@ export function GalleryView({
               style={{
                 backgroundColor: `rgb(${currentTheme.palette.accentRgb})`,
                 color: currentTheme.palette.accentContrast,
-                borderRadius:
-                  currentTheme.id === 'theme-1-obsidian-culler'
-                    ? '2px'
-                    : currentTheme.id === 'theme-4-paper-atelier'
-                    ? '3px'
-                    : '9999px',
-                padding: currentTheme.id === 'theme-1-obsidian-culler' ? '2px 5px' : '3px',
-                fontFamily:
-                  currentTheme.id === 'theme-1-obsidian-culler' ? 'monospace' : 'inherit',
+                borderRadius: isObsidian ? '2px' : isPaperAtelier ? '2px' : '9999px',
+                padding: isObsidian || isPaperAtelier ? '2px 6px' : '3px',
+                fontFamily: isObsidian
+                  ? 'var(--font-mono), monospace'
+                  : isPaperAtelier
+                  ? 'var(--font-serif), serif'
+                  : 'inherit',
                 fontSize: '10px',
+                letterSpacing: isObsidian || isPaperAtelier ? '0.06em' : 'normal',
               }}
             >
-              {currentTheme.id === 'theme-1-obsidian-culler' ? (
-                <span>CULLED</span>
+              {isObsidian ? (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                  <span>CULLED</span>
+                </span>
+              ) : isPaperAtelier ? (
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>FOLIO</span>
+                </span>
               ) : (
                 <CheckCircle2 className="w-3.5 h-3.5" />
               )}
@@ -1005,7 +1035,6 @@ export function GalleryView({
           )}
         </div>
 
-        {}
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none">
           <button
             onClick={(e) => {
@@ -1020,16 +1049,32 @@ export function GalleryView({
           </button>
         </div>
 
-        {/* Bottom Filename Overlay */}
+        {/* Bottom Filename Overlay (Archival Contact-Sheet Strip in Theme 4, Telemetry Bar in Theme 1) */}
         <div
-          className={`absolute bottom-0 inset-x-0 p-2 text-left pointer-events-none z-10 ${
-            isLiquidGlass || isCupertino
-              ? 'bg-gradient-to-t from-black/85 via-black/55 to-transparent backdrop-blur-[6px]'
-              : 'bg-gradient-to-t from-black/90 via-black/50 to-transparent'
+          className={`absolute bottom-0 inset-x-0 text-left pointer-events-none z-10 ${
+            isPaperAtelier
+              ? 'px-2 py-1.5 bg-[#f6f3ec]/95 dark:bg-[#23201c]/95 border-t border-[#dcd4c4] dark:border-[#433c35]'
+              : isObsidian
+              ? 'p-2 bg-gradient-to-t from-[#060709]/95 via-[#060709]/70 to-transparent'
+              : isLiquidGlass || isCupertino
+              ? 'p-2 bg-gradient-to-t from-black/85 via-black/55 to-transparent backdrop-blur-[6px]'
+              : 'p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent'
           }`}
         >
-          <p className="text-[11px] font-medium text-white truncate drop-shadow-sm">{item.name}</p>
-          <div className="flex justify-between items-center text-[10px] text-slate-300 font-mono tabular-nums">
+          <p
+            className={`text-[11px] font-medium truncate ${
+              isPaperAtelier
+                ? 'theme-heading theme-text font-semibold'
+                : 'text-white drop-shadow-sm'
+            }`}
+          >
+            {item.name}
+          </p>
+          <div
+            className={`flex justify-between items-center text-[10px] font-mono tabular-nums ${
+              isPaperAtelier ? 'theme-text-secondary' : 'text-slate-300'
+            }`}
+          >
             <span>{(item.size / (1024 * 1024)).toFixed(1)} MB</span>
             {item.subfolder && (
               <span className="opacity-80 truncate max-w-[80px]">{item.subfolder}</span>
@@ -1048,7 +1093,9 @@ export function GalleryView({
           ? 'liquid-glass-backdrop'
           : isCupertino
           ? 'cupertino-frosted-backdrop'
-          : ''
+          : isPaperAtelier
+          ? 'paper-atelier-backdrop'
+          : 'obsidian-culler-backdrop'
       }`}
     >
       {/* Ambient Optical Light Mesh & Prismatic Ice Refraction Layer */}
@@ -1101,9 +1148,7 @@ export function GalleryView({
 
       {}
       <div
-        className={`sticky top-0 z-30 px-4 sm:px-6 py-2.5 transition-all border-b theme-border theme-header ${
-          isLiquidGlass ? 'liquid-specular-rim' : isCupertino ? 'cupertino-vibrancy-rim' : ''
-        }`}
+        className={`sticky top-0 z-30 px-4 sm:px-6 py-2.5 transition-all border-b theme-border theme-header ${rimClass}`}
       >
         <div className="max-w-[1920px] mx-auto flex flex-col gap-2">
           {/* Main Action Bar */}
@@ -1405,9 +1450,7 @@ export function GalleryView({
 
       {}
       <div
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-3.5 py-2 flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 select-none theme-hud-dock ${
-          isLiquidGlass ? 'liquid-specular-rim' : isCupertino ? 'cupertino-vibrancy-rim' : ''
-        }`}
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 px-3.5 py-2 flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 select-none theme-hud-dock ${rimClass}`}
       >
         {/* Layout Toggle */}
         <div

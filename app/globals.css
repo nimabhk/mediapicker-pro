@@ -6,10 +6,11 @@
 @theme {
   --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
+  --font-serif: var(--font-serif), "Newsreader", Georgia, Cambria, "Times New Roman", serif;
 }
 
 /* ==========================================================================
-   MEDIA PICKER PRO - 4 DEEP OPTICAL DESIGN SYSTEMS
+   MEDIA PICKER PRO - 4 DEEP OPTICAL & TACTILE DESIGN SYSTEMS
    ========================================================================== */
 
 :root {
@@ -55,10 +56,10 @@
 :root.dark,
 html.dark {
   color-scheme: dark;
-  --theme-bg: #0d0e11;
-  --theme-surface: #17191e;
-  --theme-surface-elevated: #22262e;
-  --theme-surface-hover: #2c313a;
+  --theme-bg: #08090c;
+  --theme-surface: #12141a;
+  --theme-surface-elevated: #191c24;
+  --theme-surface-hover: #222631;
   --theme-surface-subtle: rgba(255, 255, 255, 0.03);
   --theme-border: rgba(255, 255, 255, 0.08);
   --theme-border-subtle: rgba(255, 255, 255, 0.04);
@@ -74,79 +75,85 @@ html.dark {
   --theme-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   --theme-elevated-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
   --theme-btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --theme-input-bg: rgba(13, 14, 17, 0.8);
+  --theme-input-bg: rgba(8, 9, 12, 0.85);
   --theme-input-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 /* --------------------------------------------------------------------------
-   THEME 1: OBSIDIAN CULLER (Digital Grading Darkroom)
+   THEME 1: OBSIDIAN CULLER (CNC Anodized Console & OLED Grading Darkroom)
    -------------------------------------------------------------------------- */
 :root[data-theme="theme-1-obsidian-culler"].dark,
 html.dark[data-theme="theme-1-obsidian-culler"] {
   color-scheme: dark;
-  --theme-bg: #0d0e11;
-  --theme-surface: #15171c;
-  --theme-surface-elevated: #1e2128;
-  --theme-surface-hover: #282c35;
-  --theme-surface-subtle: #111317;
-  --theme-surface-gradient: none;
-  --theme-elevated-gradient: none;
-  --theme-btn-gradient: none;
+  --theme-bg: #08090c;
+  --theme-surface: #12141a;
+  --theme-surface-elevated: #181b22;
+  --theme-surface-hover: #21252f;
+  --theme-surface-subtle: #0c0e12;
+  --theme-surface-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 100%);
+  --theme-elevated-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(10, 12, 16, 0.45) 100%);
+  --theme-btn-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.065) 0%, rgba(0, 0, 0, 0.3) 100%);
   --theme-border: rgba(255, 255, 255, 0.09);
-  --theme-border-subtle: rgba(255, 255, 255, 0.04);
-  --theme-border-strong: rgba(0, 229, 255, 0.35);
-  --theme-text: #f3f4f6;
-  --theme-text-secondary: #9ca3af;
-  --theme-text-muted: #646d7a;
+  --theme-border-subtle: rgba(255, 255, 255, 0.045);
+  --theme-border-strong: rgba(0, 229, 255, 0.48);
+  --theme-text: #f3f5f8;
+  --theme-text-secondary: #9ba3b0;
+  --theme-text-muted: #5e6673;
   --theme-accent: #00e5ff;
   --theme-accent-rgb: 0, 229, 255;
-  --theme-accent-contrast: #041014;
+  --theme-accent-contrast: #031014;
   --theme-danger: #ff3b30;
-  --theme-glow: 0 0 20px rgba(0, 229, 255, 0.55);
-  --theme-card-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
-  --theme-elevated-shadow: 0 16px 42px rgba(0, 0, 0, 0.78);
-  --theme-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.4);
-  --theme-input-bg: #0f1115;
-  --theme-input-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  --theme-glow: 0 0 18px rgba(0, 229, 255, 0.52);
+  /* CNC Machined Anodized Micro-Bevels */
+  --theme-card-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), inset 0 0 0 1px rgba(0, 0, 0, 0.85), 0 8px 22px -4px rgba(0, 0, 0, 0.78);
+  --theme-elevated-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.95), 0 22px 54px -8px rgba(0, 0, 0, 0.92);
+  --theme-btn-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.09), inset 0 -1px 0 0 rgba(0, 0, 0, 0.75), 0 1px 3px rgba(0, 0, 0, 0.65);
+  --theme-input-bg: #060709;
+  --theme-input-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.05);
   --theme-radius-card: 4px;
   --theme-radius-btn: 4px;
   --theme-radius-panel: 6px;
   --theme-radius-hud: 6px;
   --theme-backdrop-blur: 0px;
   --theme-backdrop-filter: none;
-  --theme-paper-texture: none;
-  --theme-ambient-mesh: none;
-  --theme-slideshow-bg: #090a0c;
+  /* Subtle Anodized Metal Micro-Texture */
+  --theme-paper-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='cncGrain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23cncGrain)' opacity='0.018'/%3E%3C/svg%3E");
+  /* Darkroom Calibration Loupe Grid & Subtle Telemetry Glow */
+  --theme-ambient-mesh: radial-gradient(ellipse 80% 35% at 50% -10%, rgba(0, 229, 255, 0.065), transparent 70%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.016) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.016) 1px, transparent 1px);
+  --theme-slideshow-bg: #050608;
   --theme-slideshow-filter: none;
 }
 
 :root[data-theme="theme-1-obsidian-culler"]:not(.dark),
 html:not(.dark)[data-theme="theme-1-obsidian-culler"] {
   color-scheme: light;
-  --theme-bg: #f1f3f7;
+  --theme-bg: #edf0f5;
   --theme-surface: #ffffff;
   --theme-surface-elevated: #ffffff;
-  --theme-surface-hover: #eaeef5;
-  --theme-surface-subtle: #f7f8fb;
-  --theme-surface-gradient: none;
-  --theme-elevated-gradient: none;
-  --theme-btn-gradient: none;
-  --theme-border: #d5d9e2;
-  --theme-border-subtle: #e5e8f0;
-  --theme-border-strong: #0099b8;
-  --theme-text: #111418;
-  --theme-text-secondary: #4b5260;
-  --theme-text-muted: #767f8f;
-  --theme-accent: #0099b8;
-  --theme-accent-rgb: 0, 153, 184;
+  --theme-surface-hover: #e6ebf2;
+  --theme-surface-subtle: #f4f6fa;
+  --theme-surface-gradient: linear-gradient(180deg, #ffffff 0%, #f9fafc 100%);
+  --theme-elevated-gradient: linear-gradient(180deg, #ffffff 0%, #f4f6fa 100%);
+  --theme-btn-gradient: linear-gradient(180deg, #ffffff 0%, #eef1f6 100%);
+  --theme-border: #cfd5e0;
+  --theme-border-subtle: #e2e6ef;
+  --theme-border-strong: #008ba8;
+  --theme-text: #0f1318;
+  --theme-text-secondary: #454d5b;
+  --theme-text-muted: #727b8c;
+  --theme-accent: #008ba8;
+  --theme-accent-rgb: 0, 139, 168;
   --theme-accent-contrast: #ffffff;
   --theme-danger: #dc2626;
-  --theme-glow: 0 0 16px rgba(0, 153, 184, 0.35);
-  --theme-card-shadow: 0 2px 8px rgba(17, 20, 24, 0.06);
-  --theme-elevated-shadow: 0 12px 32px rgba(17, 20, 24, 0.12);
-  --theme-btn-shadow: 0 1px 2px rgba(17, 20, 24, 0.06);
-  --theme-input-bg: #f8fafc;
-  --theme-input-shadow: inset 0 1px 2px rgba(17, 20, 24, 0.05);
+  --theme-glow: 0 0 16px rgba(0, 139, 168, 0.35);
+  /* D65 Daylight Proofing Table Instrument Bevels */
+  --theme-card-shadow: inset 0 1px 0 0 #ffffff, 0 0 0 1px rgba(15, 19, 24, 0.05), 0 4px 12px -2px rgba(15, 19, 24, 0.07);
+  --theme-elevated-shadow: inset 0 1px 0 0 #ffffff, 0 0 0 1px rgba(15, 19, 24, 0.08), 0 18px 40px -6px rgba(15, 19, 24, 0.14);
+  --theme-btn-shadow: inset 0 1px 0 0 #ffffff, 0 1px 2px rgba(15, 19, 24, 0.08);
+  --theme-input-bg: #f1f4f9;
+  --theme-input-shadow: inset 0 1.5px 3px rgba(15, 19, 24, 0.08), 0 1px 0 #ffffff;
   --theme-radius-card: 4px;
   --theme-radius-btn: 4px;
   --theme-radius-panel: 6px;
@@ -154,8 +161,10 @@ html:not(.dark)[data-theme="theme-1-obsidian-culler"] {
   --theme-backdrop-blur: 0px;
   --theme-backdrop-filter: none;
   --theme-paper-texture: none;
-  --theme-ambient-mesh: none;
-  --theme-slideshow-bg: #ebeef4;
+  --theme-ambient-mesh: radial-gradient(ellipse 80% 35% at 50% -10%, rgba(0, 139, 168, 0.06), transparent 70%),
+    linear-gradient(to right, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.025) 1px, transparent 1px);
+  --theme-slideshow-bg: #e6eaf0;
   --theme-slideshow-filter: none;
 }
 
@@ -165,7 +174,7 @@ html:not(.dark)[data-theme="theme-1-obsidian-culler"] {
 :root[data-theme="theme-2-cupertino-frosted-pro"].dark,
 html.dark[data-theme="theme-2-cupertino-frosted-pro"] {
   color-scheme: dark;
-  --theme-bg: #0f1015; /* Translucent Graphite Materials allowing rich background bleed */
+  --theme-bg: #0f1015;
   --theme-surface: rgba(34, 35, 43, 0.56);
   --theme-surface-elevated: rgba(44, 46, 56, 0.66);
   --theme-surface-hover: rgba(62, 65, 78, 0.68);
@@ -184,7 +193,6 @@ html.dark[data-theme="theme-2-cupertino-frosted-pro"] {
   --theme-accent-contrast: #ffffff;
   --theme-danger: #ff453a;
   --theme-glow: 0 0 22px rgba(10, 132, 255, 0.55);
-  /* Dual-Rim macOS Window Specularity: inner white top-edge + outer dark separator */
   --theme-card-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.18), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 10px 28px -6px rgba(0, 0, 0, 0.55);
   --theme-elevated-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.24), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.65), 0 20px 50px -8px rgba(0, 0, 0, 0.7);
   --theme-btn-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.28);
@@ -196,7 +204,6 @@ html.dark[data-theme="theme-2-cupertino-frosted-pro"] {
   --theme-radius-hud: 22px;
   --theme-backdrop-blur: 28px;
   --theme-backdrop-filter: blur(28px) saturate(195%) contrast(104%);
-  /* Fine anodized frosted grain */
   --theme-paper-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='macGrain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23macGrain)' opacity='0.022'/%3E%3C/svg%3E");
   --theme-ambient-mesh: radial-gradient(ellipse 85% 55% at 20% -5%, rgba(10, 132, 255, 0.24), transparent 65%), radial-gradient(ellipse 70% 50% at 85% 15%, rgba(94, 92, 230, 0.20), transparent 65%), radial-gradient(circle 650px at 50% 95%, rgba(48, 209, 88, 0.08), transparent 70%), radial-gradient(circle 500px at 15% 75%, rgba(100, 210, 255, 0.10), transparent 65%);
   --theme-slideshow-bg: rgba(18, 19, 25, 0.62);
@@ -207,7 +214,6 @@ html.dark[data-theme="theme-2-cupertino-frosted-pro"] {
 html:not(.dark)[data-theme="theme-2-cupertino-frosted-pro"] {
   color-scheme: light;
   --theme-bg: #e8edf5;
-  /* Milky Frosted Acrylic Materials */
   --theme-surface: rgba(255, 255, 255, 0.62);
   --theme-surface-elevated: rgba(255, 255, 255, 0.74);
   --theme-surface-hover: rgba(255, 255, 255, 0.85);
@@ -249,7 +255,7 @@ html:not(.dark)[data-theme="theme-2-cupertino-frosted-pro"] {
 :root[data-theme="theme-3-liquid-glass"].dark,
 html.dark[data-theme="theme-3-liquid-glass"] {
   color-scheme: dark;
-  --theme-bg: #050a14; /* Ultra-Clear Crystalline Ice Slabs (Low base opacity + diagonal specular sheen) */
+  --theme-bg: #050a14;
   --theme-surface: rgba(14, 28, 52, 0.28);
   --theme-surface-elevated: rgba(10, 24, 46, 0.44);
   --theme-surface-hover: rgba(0, 210, 255, 0.16);
@@ -283,7 +289,6 @@ html.dark[data-theme="theme-3-liquid-glass"] {
   --theme-accent-contrast: #03131a;
   --theme-danger: #ff2a55;
   --theme-glow: 0 0 28px -2px rgba(0, 210, 255, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.75);
-  /* 4-Vector Ice Bevel: Top-left diamond reflection + Bottom-right cyan refraction + Internal volume glow */
   --theme-card-shadow: inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.62),
     inset 1px 0 1px 0 rgba(255, 255, 255, 0.28),
     inset 0 -1.5px 2px 0 rgba(0, 210, 255, 0.45),
@@ -323,7 +328,6 @@ html.dark[data-theme="theme-3-liquid-glass"] {
 html:not(.dark)[data-theme="theme-3-liquid-glass"] {
   color-scheme: light;
   --theme-bg: #e2f6fc;
-  /* Translucent Polar Glacier Ice in Daylight */
   --theme-surface: rgba(255, 255, 255, 0.42);
   --theme-surface-elevated: rgba(255, 255, 255, 0.58);
   --theme-surface-hover: rgba(255, 255, 255, 0.76);
@@ -389,85 +393,108 @@ html:not(.dark)[data-theme="theme-3-liquid-glass"] {
 }
 
 /* --------------------------------------------------------------------------
-   THEME 4: PAPER ATELIER (Tactile Editorial Drafting Canvas)
+   THEME 4: PAPER ATELIER (Tactile Washi Paper, Matboard & Editorial Serif)
    -------------------------------------------------------------------------- */
 :root[data-theme="theme-4-paper-atelier"]:not(.dark),
 html:not(.dark)[data-theme="theme-4-paper-atelier"] {
   color-scheme: light;
-  --theme-bg: #f7f5f0;
-  --theme-surface: #ffffff;
-  --theme-surface-elevated: #efece4;
-  --theme-surface-hover: #f1ede3;
-  --theme-surface-subtle: #f4f1ea;
-  --theme-surface-gradient: none;
-  --theme-elevated-gradient: none;
-  --theme-btn-gradient: none;
-  --theme-border: #ded7c8;
-  --theme-border-subtle: #eae4d8;
-  --theme-border-strong: #7ea69b;
-  --theme-text: #252422;
-  --theme-text-secondary: #6b6862;
-  --theme-text-muted: #9c978e;
+  --theme-bg: #f6f3ec;
+  --theme-surface: #fffdf9;
+  --theme-surface-elevated: #efeae0;
+  --theme-surface-hover: #ebe4d8;
+  --theme-surface-subtle: #f2ede4;
+  --theme-surface-gradient: linear-gradient(180deg, #fffefb 0%, #faf6ee 100%);
+  --theme-elevated-gradient: linear-gradient(180deg, #f5f1e8 0%, #ebe5d8 100%);
+  --theme-btn-gradient: linear-gradient(180deg, #fffefb 0%, #f3eee3 100%);
+  --theme-border: #dcd4c4;
+  --theme-border-subtle: #e8e1d3;
+  --theme-border-strong: #6c968b;
+  --theme-text: #23211f;
+  --theme-text-secondary: #5e5a54;
+  --theme-text-muted: #918b81;
   --theme-accent: #6c968b;
   --theme-accent-rgb: 108, 150, 139;
   --theme-accent-contrast: #ffffff;
   --theme-danger: #e07a5f;
-  --theme-glow: 0 0 16px rgba(108, 150, 139, 0.42);
-  --theme-card-shadow: 0 1px 3px rgba(40, 36, 30, 0.06), 0 4px 12px rgba(40, 36, 30, 0.04);
-  --theme-elevated-shadow: 0 12px 32px rgba(40, 36, 30, 0.12);
-  --theme-btn-shadow: 0 1px 2px rgba(40, 36, 30, 0.06);
-  --theme-input-bg: #faf8f4;
-  --theme-input-shadow: inset 0 1px 2px rgba(40, 36, 30, 0.06);
+  --theme-glow: 0 2px 10px rgba(108, 150, 139, 0.32);
+  /* Stacked Archival Paper Sheets & Letterpress Cut-Edge Physics */
+  --theme-card-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    0 1px 2px rgba(35, 33, 31, 0.06),
+    0 3px 0 -1px #faf7f0,
+    0 3px 0 0 #dcd4c4,
+    0 8px 20px -4px rgba(35, 33, 31, 0.08);
+  --theme-elevated-shadow: inset 0 1px 0 0 #ffffff,
+    0 2px 4px rgba(35, 33, 31, 0.08),
+    0 4px 0 -1px #f5f1e8,
+    0 4px 0 0 #d2c8b5,
+    0 20px 44px -8px rgba(35, 33, 31, 0.16);
+  --theme-btn-shadow: inset 0 1px 0 0 #ffffff,
+    0 1.5px 0 0 #cfc7b6,
+    0 2px 4px rgba(35, 33, 31, 0.06);
+  --theme-input-bg: #efeae0;
+  --theme-input-shadow: inset 0 1.5px 3px rgba(35, 33, 31, 0.09), 0 1px 0 rgba(255, 255, 255, 0.9);
   --theme-radius-card: 3px;
   --theme-radius-btn: 4px;
   --theme-radius-panel: 6px;
   --theme-radius-hud: 9999px;
-  --theme-font-heading: "Newsreader", Georgia, Cambria, "Times New Roman", serif;
+  --theme-font-heading: var(--font-serif), "Newsreader", Georgia, Cambria, "Times New Roman", serif;
   --theme-backdrop-blur: 10px;
   --theme-backdrop-filter: blur(10px);
-  --theme-paper-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-  --theme-ambient-mesh: none;
-  --theme-slideshow-bg: rgba(247, 245, 240, 0.94);
+  --theme-paper-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='washiLight'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23washiLight)' opacity='0.045'/%3E%3C/svg%3E");
+  --theme-ambient-mesh: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(224, 122, 95, 0.055), transparent 70%),
+    radial-gradient(circle 700px at 85% 85%, rgba(108, 150, 139, 0.065), transparent 65%);
+  --theme-slideshow-bg: rgba(246, 243, 236, 0.95);
   --theme-slideshow-filter: blur(14px);
 }
 
 :root[data-theme="theme-4-paper-atelier"].dark,
 html.dark[data-theme="theme-4-paper-atelier"] {
   color-scheme: dark;
-  --theme-bg: #1c1a17;
-  --theme-surface: #272420;
-  --theme-surface-elevated: #312d28;
-  --theme-surface-hover: #3d3832;
-  --theme-surface-subtle: #221f1b;
-  --theme-surface-gradient: none;
-  --theme-elevated-gradient: none;
-  --theme-btn-gradient: none;
-  --theme-border: #463f38;
-  --theme-border-subtle: #332d27;
+  --theme-bg: #181614;
+  --theme-surface: #23201c;
+  --theme-surface-elevated: #2c2823;
+  --theme-surface-hover: #36312b;
+  --theme-surface-subtle: #1d1a17;
+  --theme-surface-gradient: linear-gradient(180deg, rgba(255, 248, 235, 0.03) 0%, rgba(0, 0, 0, 0.16) 100%);
+  --theme-elevated-gradient: linear-gradient(180deg, rgba(255, 248, 235, 0.045) 0%, rgba(0, 0, 0, 0.25) 100%);
+  --theme-btn-gradient: linear-gradient(180deg, rgba(255, 248, 235, 0.05) 0%, rgba(0, 0, 0, 0.22) 100%);
+  --theme-border: #433c35;
+  --theme-border-subtle: #312c26;
   --theme-border-strong: #7ea69b;
-  --theme-text: #f6f3eb;
-  --theme-text-secondary: #cac3b5;
-  --theme-text-muted: #948c7e;
+  --theme-text: #f5f1e8;
+  --theme-text-secondary: #c7bfb0;
+  --theme-text-muted: #8f8779;
   --theme-accent: #7ea69b;
   --theme-accent-rgb: 126, 166, 155;
-  --theme-accent-contrast: #141c1a;
+  --theme-accent-contrast: #121a18;
   --theme-danger: #e07a5f;
-  --theme-glow: 0 0 20px rgba(126, 166, 155, 0.5);
-  --theme-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
-  --theme-elevated-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
-  --theme-btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --theme-input-bg: #181613;
-  --theme-input-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  --theme-glow: 0 2px 14px rgba(126, 166, 155, 0.38);
+  /* Dark Espresso Archival Matboard Stacked Shadows */
+  --theme-card-shadow: inset 0 1px 0 0 rgba(245, 241, 232, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 3px 0 -1px #23201c,
+    0 3px 0 0 #3d362e,
+    0 10px 24px -4px rgba(0, 0, 0, 0.65);
+  --theme-elevated-shadow: inset 0 1px 0 0 rgba(245, 241, 232, 0.08),
+    0 4px 0 -1px #2c2823,
+    0 4px 0 0 #433c35,
+    0 22px 50px -8px rgba(0, 0, 0, 0.8);
+  --theme-btn-shadow: inset 0 1px 0 0 rgba(245, 241, 232, 0.07),
+    0 1.5px 0 0 #110f0d,
+    0 2px 5px rgba(0, 0, 0, 0.45);
+  --theme-input-bg: #141210;
+  --theme-input-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.68), 0 1px 0 rgba(245, 241, 232, 0.04);
   --theme-radius-card: 3px;
   --theme-radius-btn: 4px;
   --theme-radius-panel: 6px;
   --theme-radius-hud: 9999px;
-  --theme-font-heading: "Newsreader", Georgia, Cambria, "Times New Roman", serif;
+  --theme-font-heading: var(--font-serif), "Newsreader", Georgia, Cambria, "Times New Roman", serif;
   --theme-backdrop-blur: 10px;
   --theme-backdrop-filter: blur(10px);
-  --theme-paper-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-  --theme-ambient-mesh: none;
-  --theme-slideshow-bg: rgba(28, 26, 23, 0.94);
+  --theme-paper-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='washiDark'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23washiDark)' opacity='0.035'/%3E%3C/svg%3E");
+  --theme-ambient-mesh: radial-gradient(ellipse 85% 50% at 50% -10%, rgba(126, 166, 155, 0.07), transparent 70%),
+    radial-gradient(circle 650px at 85% 85%, rgba(224, 122, 95, 0.05), transparent 65%);
+  --theme-slideshow-bg: rgba(24, 22, 20, 0.95);
   --theme-slideshow-filter: blur(14px);
 }
 
@@ -484,6 +511,10 @@ body {
   position: relative;
 }
 
+:root[data-theme="theme-1-obsidian-culler"] body {
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+}
+
 body::before {
   content: "";
   position: fixed;
@@ -495,7 +526,7 @@ body::before {
 }
 
 /* ==========================================================================
-   CORE THEME UTILITY CLASSES (DEEP GLASS & ICE PHYSICS)
+   CORE THEME UTILITY CLASSES (GLASS, ICE, CNC CONSOLE & WASHI PAPER)
    ========================================================================== */
 
 .theme-bg {
@@ -661,6 +692,14 @@ body::before {
   font-family: var(--theme-font-heading, inherit);
 }
 
+[data-theme="theme-4-paper-atelier"] .theme-heading {
+  letter-spacing: -0.015em;
+}
+
+[data-theme="theme-1-obsidian-culler"] .theme-heading {
+  letter-spacing: 0.01em;
+}
+
 .theme-text {
   color: var(--theme-text) !important;
 }
@@ -687,8 +726,20 @@ body::before {
 }
 
 /* ==========================================================================
-   SPECIALIZED CUPERTINO & LIQUID GLASS REFRACTIVE BACKDROPS & RIMS
+   SPECIALIZED BACKDROPS & RIMS ACROSS ALL 4 THEMES
    ========================================================================== */
+
+.obsidian-culler-backdrop {
+  background-color: var(--theme-bg);
+  background-image: var(--theme-ambient-mesh);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+  background-attachment: fixed;
+}
+
+.obsidian-console-rim {
+  box-shadow: var(--theme-card-shadow) !important;
+  border: 1px solid var(--theme-border) !important;
+}
 
 .liquid-glass-backdrop {
   background-color: var(--theme-bg);
@@ -700,6 +751,17 @@ body::before {
   background-color: var(--theme-bg);
   background-image: var(--theme-ambient-mesh);
   background-attachment: fixed;
+}
+
+.paper-atelier-backdrop {
+  background-color: var(--theme-bg);
+  background-image: var(--theme-ambient-mesh);
+  background-attachment: fixed;
+}
+
+.paper-editorial-rim {
+  box-shadow: var(--theme-card-shadow) !important;
+  border: 1px solid var(--theme-border) !important;
 }
 
 /* Prismatic 3D Ice Rim for Liquid Glass Elements */

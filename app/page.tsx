@@ -476,11 +476,14 @@ export default function HomePage() {
   const currentTheme = getTheme(settings.activeThemeId, isDark);
   const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
   const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const isPaperAtelier = currentTheme.id === 'theme-4-paper-atelier';
   const rimClass = isLiquidGlass
     ? 'liquid-specular-rim'
     : isCupertino
     ? 'cupertino-vibrancy-rim'
-    : '';
+    : isPaperAtelier
+    ? 'paper-editorial-rim'
+    : 'obsidian-console-rim';
 
   return (
     <div
@@ -489,7 +492,9 @@ export default function HomePage() {
           ? 'liquid-glass-backdrop'
           : isCupertino
           ? 'cupertino-frosted-backdrop'
-          : ''
+          : isPaperAtelier
+          ? 'paper-atelier-backdrop'
+          : 'obsidian-culler-backdrop'
       }`}
     >
       {/* Ambient Optical Light Mesh for Dashboard in Cupertino & Liquid Glass */}

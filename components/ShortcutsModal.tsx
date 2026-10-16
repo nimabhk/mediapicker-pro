@@ -41,11 +41,14 @@ export function ShortcutsModal({
   const currentTheme = getTheme(activeThemeId, isDarkMode);
   const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
   const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const isPaperAtelier = currentTheme.id === 'theme-4-paper-atelier';
   const rimClass = isLiquidGlass
     ? 'liquid-specular-rim'
     : isCupertino
     ? 'cupertino-vibrancy-rim'
-    : '';
+    : isPaperAtelier
+    ? 'paper-editorial-rim'
+    : 'obsidian-console-rim';
 
   const kbdClass =
     'px-2 py-0.5 rounded theme-surface border theme-border font-mono text-[11px] font-bold theme-text shadow-sm';

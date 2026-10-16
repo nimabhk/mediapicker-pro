@@ -607,11 +607,15 @@ export function SlideshowView({
   const currentTheme = getTheme(settings.activeThemeId, isDarkMode);
   const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
   const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const isPaperAtelier = currentTheme.id === 'theme-4-paper-atelier';
+  const isObsidian = currentTheme.id === 'theme-1-obsidian-culler';
   const rimClass = isLiquidGlass
     ? 'liquid-specular-rim'
     : isCupertino
     ? 'cupertino-vibrancy-rim'
-    : '';
+    : isPaperAtelier
+    ? 'paper-editorial-rim'
+    : 'obsidian-console-rim';
 
   if (activeItems.length === 0) {
     return (
@@ -645,7 +649,9 @@ export function SlideshowView({
           ? 'liquid-glass-backdrop'
           : isCupertino
           ? 'cupertino-frosted-backdrop'
-          : ''
+          : isPaperAtelier
+          ? 'paper-atelier-backdrop'
+          : 'obsidian-culler-backdrop'
       }`}
       onMouseMove={handleMouseMove}
       onClick={(e) => {
@@ -1014,14 +1020,19 @@ export function SlideshowView({
                 ? '1px solid rgba(125, 235, 255, 0.38)'
                 : isCupertino
                 ? '1px solid rgba(255, 255, 255, 0.16)'
-                : 'none',
+                : isPaperAtelier
+                ? '1px solid var(--theme-border)'
+                : '1px solid rgba(255, 255, 255, 0.08)',
+              outlineOffset: isObsidian && isSelected ? '-3px' : '0px',
               boxShadow: isSelected
-                ? 'var(--theme-glow), var(--theme-elevated-shadow)'
+                ? isObsidian
+                  ? 'inset 0 0 0 2px #050608, var(--theme-glow), var(--theme-elevated-shadow)'
+                  : 'var(--theme-glow), var(--theme-elevated-shadow)'
                 : 'var(--theme-elevated-shadow)',
             }}
             className={`relative max-w-full max-h-full transition-all duration-300 flex items-center justify-center overflow-hidden ${
               zoomScale > 1 ? 'cursor-grab active:cursor-grabbing' : ''
-            }`}
+            } ${isPaperAtelier && zoomScale === 1 ? 'p-2 sm:p-3 bg-[#fffdf9] dark:bg-[#23201c]' : ''}`}
           >
             <div
               style={{
@@ -1079,9 +1090,15 @@ export function SlideshowView({
 
             {/* Selected Badge on Media */}
             {isSelected && (
-              <div className="absolute top-4 right-4 z-20 px-3 py-1.5 theme-btn-accent text-xs font-bold flex items-center gap-1.5 animate-in zoom-in-75 duration-200">
+              <div
+                className={`absolute top-4 right-4 z-20 px-3 py-1.5 theme-btn-accent text-xs font-bold flex items-center gap-1.5 animate-in zoom-in-75 duration-200 ${
+                  isObsidian ? 'font-mono tracking-wider' : isPaperAtelier ? 'theme-heading tracking-wide' : ''
+                }`}
+              >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>{currentTheme.id === 'theme-1-obsidian-culler' ? 'CULLED' : 'Selected'}</span>
+                <span>
+                  {isObsidian ? 'CULLED' : isPaperAtelier ? 'SELECTED FOLIO' : 'Selected'}
+                </span>
               </div>
             )}
           </div>
