@@ -1,0 +1,6 @@
+{
+  "name": "MediaPicker Pro - Local Media Culling & Slideshow Studio",
+  "description": "Fast, offline local media culling, fullscreen slideshow and gallery reviewer for photographers and editors.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
