@@ -8,6 +8,7 @@ import {
   batchExportFolderNative,
   copyToClipboardNative,
 } from '@/lib/tauri-bridge';
+import { getTheme } from '@/lib/themes';
 import {
   X,
   Archive,
@@ -52,7 +53,6 @@ export function ActionModal({
   const [folderOpMode, setFolderOpMode] = useState<'copy' | 'move'>('copy');
   const [suffixVersion, setSuffixVersion] = useState<number>(1);
 
-  // Confirmation modal state for Invert & Clear
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     type: 'invert' | 'clear' | null;
@@ -70,19 +70,36 @@ export function ActionModal({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        if (confirmModal.isOpen) {
+          setConfirmModal({ isOpen: false, type: null, title: '', description: '' });
+        } else {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, confirmModal.isOpen]);
 
   if (!isOpen) return null;
+
+  const isDarkMode =
+    typeof document !== 'undefined'
+      ? document.documentElement.classList.contains('dark')
+      : settings.themeMode === 'dark' || settings.themeMode === 'system';
+
+  const currentTheme = getTheme(settings.activeThemeId, isDarkMode);
+  const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
+  const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const rimClass = isLiquidGlass
+    ? 'liquid-specular-rim'
+    : isCupertino
+    ? 'cupertino-vibrancy-rim'
+    : '';
 
   const targetItems = project.items.filter((item) =>
     targetGroup === 'selected' ? item.selected : !item.selected
   );
-
   const selectedCount = project.items.filter((i) => i.selected).length;
   const unselectedCount = project.items.length - selectedCount;
 
@@ -96,7 +113,9 @@ export function ActionModal({
     setZipProgress(0);
     setZipStatusText('Preparing files in browser...');
     try {
-      const zipName = `${project.name}_${targetGroup === 'selected' ? 'Selected' : 'Unselected'}_${targetItems.length}files.zip`;
+      const zipName = `${project.name}_${
+        targetGroup === 'selected' ? 'Selected' : 'Unselected'
+      }_${targetItems.length}files.zip`;
       await downloadZip(targetItems, zipName, (percent, status) => {
         setZipProgress(percent);
         setZipStatusText(status);
@@ -117,7 +136,9 @@ export function ActionModal({
       onShowToast('No files to export in this group.');
       return;
     }
-    const txtName = `${project.name}_${targetGroup === 'selected' ? 'Selected' : 'Unselected'}_paths.txt`;
+    const txtName = `${project.name}_${
+      targetGroup === 'selected' ? 'Selected' : 'Unselected'
+    }_paths.txt`;
     exportTextList(targetItems, txtName, includeFullPath);
     onShowToast(`Downloaded text list with ${targetItems.length} file paths.`);
     onClose();
@@ -161,7 +182,9 @@ export function ActionModal({
       onUndoPush('Inverted selection', prevState);
     }
     setConfirmModal({ isOpen: false, type: null, title: '', description: '' });
-    onShowToast(`Inverted selections: ${newSelectedCount} items are now selected (Cmd+Z to undo).`);
+    onShowToast(
+      `Inverted selections: ${newSelectedCount} items are now selected (Cmd+Z to undo).`
+    );
   };
 
   // 5. Clear All Selections
@@ -203,7 +226,6 @@ export function ActionModal({
     const effectiveSuffix = suffixVersion > 1 ? `${folderSuffix}_${suffixVersion}` : folderSuffix;
     const destFolderName = `${project.name}${effectiveSuffix}`;
 
-    // If running in native Tauri, execute direct OS atomic copy/move!
     if (isTauri()) {
       try {
         const rootPath = project.rootPathName || project.name;
@@ -215,7 +237,11 @@ export function ActionModal({
           folderOpMode
         );
         if (res) {
-          onShowToast(`Successfully ${folderOpMode === 'move' ? 'moved' : 'copied'} ${res.processedCount} files to: ${res.destinationPath}`);
+          onShowToast(
+            `Successfully ${folderOpMode === 'move' ? 'moved' : 'copied'} ${
+              res.processedCount
+            } files to: ${res.destinationPath}`
+          );
           onClose();
           return;
         }
@@ -225,7 +251,6 @@ export function ActionModal({
       }
     }
 
-    // Web fallback: Generate Bash / Command script for macOS & Windows
     const command = folderOpMode === 'move' ? 'mv' : 'cp';
     const lines = [
       '#!/bin/bash',
@@ -251,59 +276,89 @@ export function ActionModal({
     onShowToast(
       `Generated executable script: ${destFolderName}. Also packaging ZIP archive...`
     );
-
-    // Also download ZIP with that suffix name
     handleDownloadZip();
   };
 
-  const currentDestFolderName = suffixVersion > 1
-    ? `${project.name}${folderSuffix}_${suffixVersion}`
-    : `${project.name}${folderSuffix}`;
+  const currentDestFolderName =
+    suffixVersion > 1
+      ? `${project.name}${folderSuffix}_${suffixVersion}`
+      : `${project.name}${folderSuffix}`;
+
+  const getSelectableCardStyle = (isActive: boolean): React.CSSProperties => {
+    if (!isActive) {
+      return { borderRadius: 'var(--theme-radius-card, 8px)' };
+    }
+    return {
+      borderRadius: 'var(--theme-radius-card, 8px)',
+      borderColor: `rgb(${currentTheme.palette.accentRgb})`,
+      backgroundColor: `rgba(${currentTheme.palette.accentRgb}, 0.14)`,
+      boxShadow: 'var(--theme-glow)',
+    };
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl text-slate-900 dark:text-slate-100 overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isZipping) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 theme-modal-backdrop animate-in fade-in duration-200"
+    >
+      <div
+        className={`relative w-full max-w-xl theme-modal-window overflow-hidden flex flex-col max-h-[90vh] transition-all duration-200 ${rimClass}`}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
-          <div className="flex items-center gap-2">
-            <Archive className="w-5 h-5 text-orange-500" />
+        <div className="flex items-center justify-between px-6 py-4 border-b theme-border theme-surface-subtle">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl theme-surface border theme-border theme-accent">
+              <Archive className="w-4 h-4" />
+            </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Batch Actions & Export Center</h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Project: <span className="text-slate-800 dark:text-slate-200 font-medium">{project.name}</span>
+              <h2 className="text-base font-bold theme-heading theme-text">
+                Batch Actions &amp; Export Center
+              </h2>
+              <p className="text-[11px] theme-text-secondary">
+                Project: <span className="theme-text font-semibold">{project.name}</span>
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 theme-btn theme-surface border theme-border theme-text-secondary hover:theme-text"
+            title="Close (Esc)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-6 space-y-6 overflow-y-auto text-left">
           {/* Target Group Selector (Selected vs Unselected) */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+          <div className="space-y-2.5">
+            <label className="text-xs font-semibold theme-text-secondary uppercase tracking-wider block">
               Which group of files do you want to target?
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setTargetGroup('selected')}
-                className={`p-3 rounded-xl border text-xs font-medium flex items-center justify-between transition-all ${
-                  targetGroup === 'selected'
-                    ? 'border-orange-500 bg-orange-500/15 text-orange-600 dark:text-orange-300 ring-1 ring-orange-500/40'
-                    : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
+                style={getSelectableCardStyle(targetGroup === 'selected')}
+                className="p-3.5 border theme-border theme-surface text-xs font-medium flex items-center justify-between transition-all"
               >
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-orange-500" />
-                  <span>Selected Files</span>
+                  <CheckCircle
+                    className={`w-4 h-4 ${
+                      targetGroup === 'selected' ? 'theme-accent' : 'theme-text-muted'
+                    }`}
+                  />
+                  <span className="font-semibold theme-text">Selected Files</span>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-200 text-[11px] tabular-nums font-bold">
+                <span
+                  className="px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-bold"
+                  style={{
+                    backgroundColor: `rgba(${currentTheme.palette.accentRgb}, 0.2)`,
+                    color: `rgb(${currentTheme.palette.accentRgb})`,
+                  }}
+                >
                   {selectedCount}
                 </span>
               </button>
@@ -311,17 +366,18 @@ export function ActionModal({
               <button
                 type="button"
                 onClick={() => setTargetGroup('unselected')}
-                className={`p-3 rounded-xl border text-xs font-medium flex items-center justify-between transition-all ${
-                  targetGroup === 'unselected'
-                    ? 'border-orange-500 bg-orange-500/15 text-orange-600 dark:text-orange-300 ring-1 ring-orange-500/40'
-                    : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
+                style={getSelectableCardStyle(targetGroup === 'unselected')}
+                className="p-3.5 border theme-border theme-surface text-xs font-medium flex items-center justify-between transition-all"
               >
                 <div className="flex items-center gap-2">
-                  <FolderSync className="w-4 h-4 text-slate-400" />
-                  <span>Unselected Files (Inverse)</span>
+                  <FolderSync
+                    className={`w-4 h-4 ${
+                      targetGroup === 'unselected' ? 'theme-accent' : 'theme-text-muted'
+                    }`}
+                  />
+                  <span className="font-semibold theme-text">Unselected (Inverse)</span>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] tabular-nums font-bold">
+                <span className="px-2 py-0.5 rounded theme-surface-subtle border theme-border theme-text-secondary text-[11px] font-mono tabular-nums font-bold">
                   {unselectedCount}
                 </span>
               </button>
@@ -329,17 +385,17 @@ export function ActionModal({
           </div>
 
           {/* Quick Selection Helpers */}
-          <div className="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-800/80">
+          <div className="flex items-center gap-2.5 pt-1 border-t theme-border">
             <button
               onClick={promptInvertSelection}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 theme-btn theme-surface border theme-border text-xs font-medium theme-text"
             >
-              <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+              <RefreshCw className="w-3.5 h-3.5 theme-accent" />
               <span>Invert Selection</span>
             </button>
             <button
               onClick={promptClearSelection}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-xs text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 theme-btn theme-surface border theme-border text-xs font-medium theme-text hover:!text-rose-500 hover:!border-rose-500/40"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-500" />
               <span>Clear All Selections</span>
@@ -347,57 +403,60 @@ export function ActionModal({
           </div>
 
           {/* Suffix Folder Copy / Move Section */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+          <div
+            style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+            className="p-4 theme-surface-subtle border theme-border space-y-3.5"
+          >
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <FolderPlus className="w-4 h-4 text-emerald-500" />
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">Copy or Move to New Suffix Folder</span>
+                  <span className="text-sm font-bold theme-heading theme-text">
+                    Copy or Move to New Suffix Folder
+                  </span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Export target files to a new sibling folder beside original (e.g. <span className="font-mono">{currentDestFolderName}</span>)
+                <p className="text-xs theme-text-secondary mt-0.5">
+                  Export target files to a sibling folder beside original (e.g.{' '}
+                  <span className="font-mono theme-accent font-semibold">
+                    {currentDestFolderName}
+                  </span>
+                  )
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="text-[11px] font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-[11px] font-medium theme-text-secondary block mb-1">
                   Folder Suffix:
                 </label>
                 <input
                   type="text"
                   value={folderSuffix}
                   onChange={(e) => setFolderSuffix(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-orange-500"
+                  className="w-full px-3 py-1.5 theme-input text-xs font-mono"
                   placeholder="_selected"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                <label className="text-[11px] font-medium theme-text-secondary block mb-1">
                   Operation Mode:
                 </label>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <button
                     type="button"
                     onClick={() => setFolderOpMode('copy')}
-                    className={`py-1.5 px-2 rounded-lg border text-center transition-all ${
-                      folderOpMode === 'copy'
-                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold'
-                        : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
-                    }`}
+                    style={getSelectableCardStyle(folderOpMode === 'copy')}
+                    className="py-1.5 px-2 border theme-border theme-surface text-center font-semibold theme-text transition-all"
                   >
                     Copy (Duplicate)
                   </button>
                   <button
                     type="button"
                     onClick={() => setFolderOpMode('move')}
-                    className={`py-1.5 px-2 rounded-lg border text-center transition-all ${
-                      folderOpMode === 'move'
-                        ? 'border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold'
-                        : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
-                    }`}
+                    style={getSelectableCardStyle(folderOpMode === 'move')}
+                    className="py-1.5 px-2 border theme-border theme-surface text-center font-semibold theme-text transition-all"
                   >
                     Move (Cut)
                   </button>
@@ -406,58 +465,62 @@ export function ActionModal({
             </div>
 
             {/* Collision detection option */}
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200 dark:border-slate-800/80">
-              <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 text-[11px]">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                Target folder name: <strong className="text-slate-800 dark:text-slate-200 font-mono">{currentDestFolderName}</strong>
+            <div className="flex items-center justify-between text-xs pt-2 border-t theme-border">
+              <span className="theme-text-secondary flex items-center gap-1.5 text-[11px]">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>
+                  Target folder:{' '}
+                  <strong className="theme-text font-mono">{currentDestFolderName}</strong>
+                </span>
               </span>
               <button
                 type="button"
                 onClick={() => setSuffixVersion((v) => v + 1)}
-                className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline"
+                className="text-[11px] font-semibold theme-accent hover:underline"
               >
                 + Increment index ({suffixVersion})
               </button>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1">
               <button
                 disabled={targetItems.length === 0}
                 onClick={handleCreateSuffixFolder}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold theme-btn-accent disabled:opacity-40"
               >
                 <Terminal className="w-3.5 h-3.5" />
-                <span>Export & Generate Script for &quot;{currentDestFolderName}&quot;</span>
+                <span>Export &amp; Generate Script for &quot;{currentDestFolderName}&quot;</span>
               </button>
             </div>
           </div>
 
           {/* Action Options */}
-          <div className="space-y-3 pt-2">
-            <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Export & Packaging Options
+          <div className="space-y-3 pt-1">
+            <h3 className="text-xs font-semibold theme-text-secondary uppercase tracking-wider">
+              Export &amp; Packaging Options
             </h3>
 
             {/* ZIP Download Card */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
-              <div className="flex items-start justify-between">
+            <div
+              style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+              className="p-4 theme-surface-subtle border theme-border space-y-3"
+            >
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Archive className="w-4 h-4 text-orange-500" />
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">Download ZIP Package (.ZIP)</span>
+                    <Archive className="w-4 h-4 theme-accent" />
+                    <span className="text-sm font-bold theme-heading theme-text">
+                      Download ZIP Package (.ZIP)
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs theme-text-secondary mt-0.5">
                     Bundles all files directly in-browser with folder tree hierarchy intact.
                   </p>
                 </div>
                 <button
                   disabled={isZipping || targetItems.length === 0}
                   onClick={handleDownloadZip}
-                  className={`px-4 py-2 rounded-lg text-xs font-medium text-white transition-all shadow-md shrink-0 ${
-                    settings.neonAccent === 'orange'
-                      ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/30'
-                      : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className="px-4 py-2 text-xs font-bold theme-btn-accent shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isZipping ? 'Zipping...' : 'Download ZIP'}
                 </button>
@@ -465,59 +528,71 @@ export function ActionModal({
 
               {isZipping && (
                 <div className="space-y-1.5 pt-2">
-                  <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="w-full h-2 theme-surface rounded-full overflow-hidden border theme-border">
                     <div
-                      className="h-full bg-orange-500 transition-all duration-200"
-                      style={{ width: `${zipProgress}%` }}
-                    ></div>
+                      className="h-full transition-all duration-200"
+                      style={{
+                        width: `${zipProgress}%`,
+                        backgroundColor: `rgb(${currentTheme.palette.accentRgb})`,
+                        boxShadow: 'var(--theme-glow)',
+                      }}
+                    />
                   </div>
-                  <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="flex justify-between text-[11px] theme-text-secondary">
                     <span>{zipStatusText}</span>
-                    <span className="font-mono tabular-nums">{zipProgress}%</span>
+                    <span className="font-mono tabular-nums theme-text font-bold">
+                      {zipProgress}%
+                    </span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* TXT Export Card */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
-              <div className="flex items-start justify-between">
+            <div
+              style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+              className="p-4 theme-surface-subtle border theme-border space-y-3"
+            >
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-sky-500" />
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">Download Text List (.TXT)</span>
+                    <FileText className="w-4 h-4 theme-accent" />
+                    <span className="text-sm font-bold theme-heading theme-text">
+                      Download Text List (.TXT)
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Exports one file path per line, ready for batch scripts, terminal commands or notes.
+                  <p className="text-xs theme-text-secondary mt-0.5">
+                    Exports one file path per line, ready for batch scripts, terminal commands or
+                    notes.
                   </p>
                 </div>
                 <button
                   disabled={targetItems.length === 0}
                   onClick={handleExportTxt}
-                  className="px-4 py-2 rounded-lg text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white transition-all shadow-md shadow-sky-600/30 shrink-0 disabled:opacity-50"
+                  className="px-4 py-2 text-xs font-semibold theme-btn theme-surface border theme-border theme-text shrink-0 disabled:opacity-40"
                 >
                   Download TXT
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 pt-1 text-xs text-slate-600 dark:text-slate-300">
-                <label className="flex items-center gap-1.5 cursor-pointer">
+              <div className="flex items-center gap-4 pt-1 text-xs theme-text-secondary">
+                <label className="flex items-center gap-1.5 cursor-pointer hover:theme-text">
                   <input
                     type="radio"
                     name="txtFormat"
                     checked={includeFullPath}
                     onChange={() => setIncludeFullPath(true)}
-                    className="accent-orange-500"
+                    className="accent-cyan-500 cursor-pointer"
                   />
                   <span>Full relative path (Folder/Sub/file)</span>
                 </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
+                <label className="flex items-center gap-1.5 cursor-pointer hover:theme-text">
                   <input
                     type="radio"
                     name="txtFormat"
                     checked={!includeFullPath}
                     onChange={() => setIncludeFullPath(false)}
-                    className="accent-orange-500"
+                    className="accent-cyan-500 cursor-pointer"
                   />
                   <span>Filename only</span>
                 </label>
@@ -525,20 +600,25 @@ export function ActionModal({
             </div>
 
             {/* Copy Clipboard Card */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between">
+            <div
+              style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+              className="p-4 theme-surface-subtle border theme-border flex items-center justify-between gap-4"
+            >
               <div>
                 <div className="flex items-center gap-2">
                   <Copy className="w-4 h-4 text-emerald-500" />
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">Copy Paths to Clipboard</span>
+                  <span className="text-sm font-bold theme-heading theme-text">
+                    Copy Paths to Clipboard
+                  </span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs theme-text-secondary mt-0.5">
                   Instant clipboard copy adhering to your configured format.
                 </p>
               </div>
               <button
                 disabled={targetItems.length === 0}
                 onClick={handleCopyClipboard}
-                className="px-4 py-2 rounded-lg text-xs font-medium bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 transition-colors shrink-0 disabled:opacity-50"
+                className="px-4 py-2 text-xs font-semibold theme-btn theme-surface border theme-border theme-text shrink-0 disabled:opacity-40"
               >
                 Copy Paths
               </button>
@@ -547,10 +627,10 @@ export function ActionModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-end">
+        <div className="px-6 py-4 border-t theme-border theme-surface-subtle flex items-center justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-medium bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
+            className="px-4 py-2 text-xs font-semibold theme-btn theme-surface border theme-border theme-text"
           >
             Close (Esc)
           </button>
@@ -558,37 +638,39 @@ export function ActionModal({
 
         {/* Confirmation Modal for Invert & Clear Selections */}
         {confirmModal.isOpen && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl p-6 shadow-2xl text-left space-y-4">
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 theme-modal-backdrop animate-in fade-in zoom-in-95 duration-150">
+            <div
+              className={`w-full max-w-md theme-modal-window p-6 text-left space-y-4 ${rimClass}`}
+            >
               <div className="flex items-center gap-3">
                 <div
-                  className={`p-2.5 rounded-xl ${
+                  className={`p-2.5 rounded-xl border ${
                     confirmModal.type === 'clear'
-                      ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
-                      : 'bg-orange-500/15 text-orange-500 border border-orange-500/30'
+                      ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
+                      : 'theme-surface-subtle theme-accent theme-border'
                   }`}
                 >
-                  <AlertTriangle className="w-6 h-6" />
+                  <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-bold theme-heading theme-text">
                     {confirmModal.title}
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Please confirm before proceeding
-                  </p>
+                  <p className="text-xs theme-text-muted">Please confirm before proceeding</p>
                 </div>
               </div>
 
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <p className="text-xs theme-text-secondary leading-relaxed theme-surface-subtle p-3 rounded-xl border theme-border">
                 {confirmModal.description}
               </p>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t theme-border">
                 <button
                   type="button"
-                  onClick={() => setConfirmModal({ isOpen: false, type: null, title: '', description: '' })}
-                  className="px-4 py-2 rounded-lg text-xs font-medium bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                  onClick={() =>
+                    setConfirmModal({ isOpen: false, type: null, title: '', description: '' })
+                  }
+                  className="px-4 py-2 text-xs font-medium theme-btn theme-surface border theme-border theme-text"
                 >
                   Cancel
                 </button>
@@ -598,10 +680,10 @@ export function ActionModal({
                     if (confirmModal.type === 'invert') executeInvertSelection();
                     if (confirmModal.type === 'clear') executeClearSelection();
                   }}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-md transition-colors ${
+                  className={`px-4 py-2 text-xs font-bold transition-all ${
                     confirmModal.type === 'clear'
-                      ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30'
-                      : 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/30'
+                      ? 'theme-btn bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/30'
+                      : 'theme-btn-accent'
                   }`}
                 >
                   {confirmModal.type === 'clear' ? 'Yes, Clear All' : 'Yes, Invert Selection'}

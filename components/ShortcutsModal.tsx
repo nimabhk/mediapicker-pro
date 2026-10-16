@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { loadSettings } from '@/lib/storage';
+import { getTheme } from '@/lib/themes';
 import { X, Keyboard, Mouse, Monitor, Sparkles } from 'lucide-react';
 
 interface ShortcutsModalProps {
@@ -12,7 +14,6 @@ interface ShortcutsModalProps {
 export function ShortcutsModal({
   isOpen,
   onClose,
-  neonAccent,
 }: ShortcutsModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -27,165 +28,298 @@ export function ShortcutsModal({
 
   if (!isOpen) return null;
 
-  const isOrange = neonAccent === 'orange';
+  const activeThemeId =
+    typeof document !== 'undefined'
+      ? document.documentElement.getAttribute('data-theme') || loadSettings().activeThemeId
+      : 'theme-1-obsidian-culler';
+
+  const isDarkMode =
+    typeof document !== 'undefined'
+      ? document.documentElement.classList.contains('dark')
+      : true;
+
+  const currentTheme = getTheme(activeThemeId, isDarkMode);
+  const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
+  const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const rimClass = isLiquidGlass
+    ? 'liquid-specular-rim'
+    : isCupertino
+    ? 'cupertino-vibrancy-rim'
+    : '';
+
+  const kbdClass =
+    'px-2 py-0.5 rounded theme-surface border theme-border font-mono text-[11px] font-bold theme-text shadow-sm';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl text-slate-900 dark:text-slate-100 overflow-hidden flex flex-col max-h-[85vh] transition-colors duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 theme-modal-backdrop animate-in fade-in duration-200"
+    >
+      <div
+        className={`relative w-full max-w-2xl theme-modal-window overflow-hidden flex flex-col max-h-[85vh] transition-all duration-200 ${rimClass}`}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
+        <div className="flex items-center justify-between px-6 py-4 border-b theme-border theme-surface-subtle">
           <div className="flex items-center gap-2.5">
-            <Keyboard className={`w-5 h-5 ${isOrange ? 'text-orange-500' : 'text-emerald-500'}`} />
+            <div className="p-2 rounded-xl theme-surface border theme-border theme-accent">
+              <Keyboard className="w-4 h-4" />
+            </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Keyboard &amp; Mouse Shortcuts Cheatsheet</h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <h2 className="text-base font-bold theme-heading theme-text">
+                Keyboard &amp; Mouse Shortcuts Cheatsheet
+              </h2>
+              <p className="text-[11px] theme-text-secondary">
                 Quick reference guide for high-speed local culling and navigation
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 theme-btn theme-surface border theme-border theme-text-secondary hover:theme-text"
+            title="Close (Esc)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content */}
+        {}
         <div className="p-6 overflow-y-auto space-y-6 text-left">
           {/* Slideshow Shortcuts */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <Monitor className="w-3.5 h-3.5 text-orange-500" />
+            <h3 className="text-xs font-semibold theme-text-secondary uppercase tracking-wider flex items-center gap-2">
+              <Monitor className="w-3.5 h-3.5 theme-accent" />
               Slideshow Review Shortcuts
             </h3>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Select / Cull Slide</span>
-                <div className="flex gap-1">
-                  <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Space</kbd>
-                  <span className="text-slate-400">or</span>
-                  <span className="text-[11px] text-slate-500 flex items-center gap-1"><Mouse className="w-3 h-3" /> Click</span>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Select / Cull Slide</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <kbd className={kbdClass}>Space</kbd>
+                  <span className="theme-text-muted">or</span>
+                  <span className="text-[11px] theme-text-secondary flex items-center gap-1">
+                    <Mouse className="w-3 h-3 theme-accent" /> Click
+                  </span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Next Slide</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">&rarr; Right</kbd>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Next Slide</span>
+                <kbd className={kbdClass}>&rarr; Right</kbd>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Previous Slide</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">&larr; Left</kbd>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Previous Slide</span>
+                <kbd className={kbdClass}>&larr; Left</kbd>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Play / Pause Slideshow</span>
-                <div className="flex gap-1">
-                  <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Enter</kbd>
-                  <span className="text-slate-400">or</span>
-                  <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">P</kbd>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Play / Pause Slideshow</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <kbd className={kbdClass}>Enter</kbd>
+                  <span className="theme-text-muted">or</span>
+                  <kbd className={kbdClass}>P</kbd>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Toggle Audio Mute</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">M</kbd>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Copy Selected Paths</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Cmd / Ctrl + C</kbd>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Undo Selection</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Cmd / Ctrl + Z</kbd>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Toggle OS Fullscreen</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">F</kbd>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Zoom In / Out / Reset</span>
-                <div className="flex gap-1 items-center">
-                  <span className="text-[11px] text-slate-500 flex items-center gap-0.5"><Mouse className="w-3 h-3" /> Wheel</span>
-                  <span className="text-slate-400">or</span>
-                  <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Cmd +/-</kbd>
+              {}
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Play / Pause Video Slide</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <kbd className={kbdClass}>K</kbd>
+                  <span className="theme-text-muted">or</span>
+                  <span className="text-[11px] theme-text-secondary">Video Click</span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Switch to Gallery View</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Backspace</kbd>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Toggle Audio Mute</span>
+                <kbd className={kbdClass}>M</kbd>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Exit to Dashboard</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Esc</kbd>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Copy Selected Paths</span>
+                <kbd className={kbdClass}>Cmd / Ctrl + C</kbd>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Undo / Redo Selection</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <kbd className={kbdClass}>Cmd+Z</kbd>
+                  <span className="theme-text-muted">/</span>
+                  <kbd className={kbdClass}>Cmd+Shift+Z</kbd>
+                </div>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Toggle OS Fullscreen</span>
+                <kbd className={kbdClass}>F</kbd>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Zoom In / Out / Reset</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[11px] theme-text-secondary flex items-center gap-0.5">
+                    <Mouse className="w-3 h-3 theme-accent" /> Wheel
+                  </span>
+                  <span className="theme-text-muted">or</span>
+                  <kbd className={kbdClass}>Cmd +/-</kbd>
+                </div>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Switch to Gallery View</span>
+                <kbd className={kbdClass}>Backspace</kbd>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Exit to Gallery / Menu</span>
+                <kbd className={kbdClass}>Esc</kbd>
               </div>
             </div>
           </div>
 
-          {/* Gallery View Shortcuts */}
+          {}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+            <h3 className="text-xs font-semibold theme-text-secondary uppercase tracking-wider flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 theme-accent" />
               Gallery Grid Shortcuts
             </h3>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Toggle Card Selection</span>
-                <span className="text-[11px] text-slate-500 flex items-center gap-1"><Mouse className="w-3 h-3" /> Left-Click Card</span>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Toggle Card Selection</span>
+                <span className="text-[11px] theme-text-secondary flex items-center gap-1 shrink-0">
+                  <Mouse className="w-3 h-3 theme-accent" /> Left-Click Card
+                </span>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Range Select (Start to End)</span>
-                <span className="text-[11px] text-slate-500 flex items-center gap-1"><kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[10px] font-bold">Shift</kbd> + Click</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Marquee Box Select</span>
-                <span className="text-[11px] text-slate-500">Drag mouse across cards</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Marquee Deselect / Invert</span>
-                <span className="text-[11px] text-slate-500">Ctrl + Drag / Ctrl+Shift + Drag</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Hover Video Preview</span>
-                <span className="text-[11px] text-slate-500 flex items-center gap-1"><Mouse className="w-3 h-3" /> Mouse Hover</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Return to Dashboard</span>
-                <div className="flex gap-1">
-                  <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Backspace</kbd>
-                  <span className="text-slate-400">or</span>
-                  <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Esc</kbd>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Range Select / Deselect / Invert</span>
+                <div className="flex items-center gap-1 text-[11px] theme-text-secondary shrink-0">
+                  <kbd className={kbdClass}>Shift</kbd>
+                  <span>/</span>
+                  <kbd className={kbdClass}>Cmd</kbd>
+                  <span>/</span>
+                  <kbd className={kbdClass}>Cmd+Shift</kbd>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-slate-700 dark:text-slate-300">Close Open Modal / Dialog</span>
-                <kbd className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-[11px] font-bold">Esc</kbd>
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Quick Preview (100% Scale)</span>
+                <span className="text-[11px] theme-accent font-semibold flex items-center gap-1 shrink-0">
+                  Hold <kbd className={kbdClass}>Alt / Opt</kbd> + Hover
+                </span>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Marquee Box Selection</span>
+                <span className="text-[11px] theme-text-secondary shrink-0">
+                  Drag / Cmd+Drag / Cmd+Shift
+                </span>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Hover Video Preview</span>
+                <span className="text-[11px] theme-text-secondary flex items-center gap-1 shrink-0">
+                  <Mouse className="w-3 h-3 theme-accent" /> 400ms Hover
+                </span>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Page Up / Page Down</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <kbd className={kbdClass}>A (PgUp)</kbd>
+                  <span className="theme-text-muted">/</span>
+                  <kbd className={kbdClass}>Z (PgDn)</kbd>
+                </div>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Return to Dashboard</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <kbd className={kbdClass}>Backspace</kbd>
+                  <span className="theme-text-muted">or</span>
+                  <kbd className={kbdClass}>Esc</kbd>
+                </div>
+              </div>
+
+              <div
+                style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                className="p-3 theme-surface-subtle border theme-border flex items-center justify-between gap-2"
+              >
+                <span className="theme-text font-medium">Close Open Modal / Dialog</span>
+                <kbd className={kbdClass}>Esc</kbd>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-between text-xs text-slate-500">
-          <span>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono">?</kbd> anywhere to open this cheatsheet</span>
+        {}
+        <div className="px-6 py-4 border-t theme-border theme-surface-subtle flex items-center justify-between text-xs theme-text-secondary">
+          <span>
+            Press <kbd className={kbdClass}>?</kbd> on Dashboard to open this cheatsheet
+          </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-medium bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
+            className="px-4 py-2 text-xs font-semibold theme-btn theme-surface border theme-border theme-text"
           >
             Close (Esc)
           </button>

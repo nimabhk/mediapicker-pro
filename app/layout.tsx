@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} ${jetbrainsMono.variable} dark`} suppressHydrationWarning>
+    <html lang="en" className={`${plusJakarta.variable} ${jetbrainsMono.variable} dark`} data-theme="theme-1-obsidian-culler" suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen transition-colors duration-200" suppressHydrationWarning>
         {children}
       </body>

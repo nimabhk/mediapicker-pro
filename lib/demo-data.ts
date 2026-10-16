@@ -19,6 +19,8 @@ function createDemoImageSvg(title: string, color: string, w: number, h: number, 
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+const DEMO_BASE_TIME = 1728800000000;
+
 export function generateDemoProject(): FolderProject {
   const demoItems: MediaFileItem[] = [
     {
@@ -27,7 +29,7 @@ export function generateDemoProject(): FolderProject {
       relativePath: 'DemoStudio/Landscape/DSC_0042_Alpine_Sunset.jpg',
       subfolder: 'Landscape',
       size: 3.4 * 1024 * 1024,
-      lastModified: Date.now() - 86400000 * 5,
+      lastModified: DEMO_BASE_TIME - 86400000 * 5,
       type: 'image',
       mimeType: 'image/jpeg',
       objectUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1920&auto=format&fit=crop&q=85',
@@ -43,7 +45,7 @@ export function generateDemoProject(): FolderProject {
       relativePath: 'DemoStudio/Fashion/Studio_Editorial_8K.png',
       subfolder: 'Fashion',
       size: 7.8 * 1024 * 1024,
-      lastModified: Date.now() - 86400000 * 4,
+      lastModified: DEMO_BASE_TIME - 86400000 * 4,
       type: 'image',
       mimeType: 'image/png',
       objectUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1920&auto=format&fit=crop&q=85',
@@ -60,7 +62,7 @@ export function generateDemoProject(): FolderProject {
       relativePath: 'DemoStudio/Architecture/Architecture_Minimalist_Lines.webp',
       subfolder: 'Architecture',
       size: 2.1 * 1024 * 1024,
-      lastModified: Date.now() - 86400000 * 3,
+      lastModified: DEMO_BASE_TIME - 86400000 * 3,
       type: 'image',
       mimeType: 'image/webp',
       objectUrl: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1920&auto=format&fit=crop&q=85',
@@ -76,7 +78,7 @@ export function generateDemoProject(): FolderProject {
       relativePath: 'DemoStudio/Wildlife/Wildlife_Kestrel_Hunting.jpg',
       subfolder: 'Wildlife',
       size: 4.8 * 1024 * 1024,
-      lastModified: Date.now() - 86400000 * 2,
+      lastModified: DEMO_BASE_TIME - 86400000 * 2,
       type: 'image',
       mimeType: 'image/jpeg',
       objectUrl: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1920&auto=format&fit=crop&q=85',
@@ -92,7 +94,7 @@ export function generateDemoProject(): FolderProject {
       relativePath: 'DemoStudio/MotionReels/Cinematic_Motion_Reel.mp4',
       subfolder: 'MotionReels',
       size: 45 * 1024 * 1024,
-      lastModified: Date.now() - 86400000 * 1,
+      lastModified: DEMO_BASE_TIME - 86400000 * 1,
       type: 'video',
       mimeType: 'video/mp4',
       objectUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
@@ -108,7 +110,7 @@ export function generateDemoProject(): FolderProject {
       relativePath: 'DemoStudio/MotionReels/Drone_Coastal_Survey_4K.mp4',
       subfolder: 'MotionReels',
       size: 125 * 1024 * 1024,
-      lastModified: Date.now() - 43200000,
+      lastModified: DEMO_BASE_TIME - 43200000,
       type: 'video',
       mimeType: 'video/mp4',
       objectUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
@@ -125,7 +127,7 @@ export function generateDemoProject(): FolderProject {
       relativePath: 'DemoStudio/Street/Night_Rain_Cyber_Neon.jpg',
       subfolder: 'Street',
       size: 3.9 * 1024 * 1024,
-      lastModified: Date.now() - 21600000,
+      lastModified: DEMO_BASE_TIME - 21600000,
       type: 'image',
       mimeType: 'image/jpeg',
       objectUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1920&auto=format&fit=crop&q=85',
@@ -141,7 +143,7 @@ export function generateDemoProject(): FolderProject {
       relativePath: 'DemoStudio/Macro/Macro_Flora_Droplet.png',
       subfolder: 'Macro',
       size: 4.2 * 1024 * 1024,
-      lastModified: Date.now() - 3600000,
+      lastModified: DEMO_BASE_TIME - 3600000,
       type: 'image',
       mimeType: 'image/png',
       objectUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1920&auto=format&fit=crop&q=85',
@@ -160,8 +162,8 @@ export function generateDemoProject(): FolderProject {
     id: 'demo_project_sample',
     name: 'Sample Project (Demo Studio)',
     rootPathName: 'DemoStudio',
-    createdAt: Date.now() - 3600000,
-    lastAccessedAt: Date.now(),
+    createdAt: DEMO_BASE_TIME - 3600000,
+    lastAccessedAt: DEMO_BASE_TIME,
     totalFilesCount: 11, // 8 media + 3 non-media files
     totalSizeBytes,
     mediaCount: 8,

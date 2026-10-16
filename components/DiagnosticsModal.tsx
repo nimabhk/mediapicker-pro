@@ -13,10 +13,10 @@ import {
   Sparkles,
   Monitor,
   Terminal,
-  ExternalLink,
 } from 'lucide-react';
 import { isTauri } from '@/lib/tauri-bridge';
 import { AppSettings } from '@/lib/types';
+import { getTheme } from '@/lib/themes';
 
 interface DiagnosticsModalProps {
   isOpen: boolean;
@@ -35,8 +35,8 @@ interface DiagnosticItem {
 function computeDiagnostics(settings: AppSettings): { results: DiagnosticItem[]; logs: string[] } {
   const results: DiagnosticItem[] = [];
   const logs: string[] = [];
-
   const now = new Date().toLocaleTimeString();
+
   logs.push(`[${now}] Running MediaPicker Pro Environment Diagnostic...`);
 
   // 1. Runtime Environment
@@ -80,7 +80,11 @@ function computeDiagnostics(settings: AppSettings): { results: DiagnosticItem[];
       ? 'File System Access API (window.showDirectoryPicker supported)'
       : 'HTML5 WebkitDirectory Folder Input (Universal fallback)',
   });
-  logs.push(`[${now}] Directory Access: ${tauriActive ? 'Native' : hasShowDirPicker ? 'showDirectoryPicker' : 'webkitdirectory input'}`);
+  logs.push(
+    `[${now}] Directory Access: ${
+      tauriActive ? 'Native' : hasShowDirPicker ? 'showDirectoryPicker' : 'webkitdirectory input'
+    }`
+  );
 
   // 4. Image Pipeline & ObjectURL
   try {
@@ -128,8 +132,18 @@ export function DiagnosticsModal({
 }: DiagnosticsModalProps) {
   const [copied, setCopied] = useState(false);
   const [isRunningTest, setIsRunningTest] = useState(false);
-
   const [diagnosticData, setDiagnosticData] = useState(() => computeDiagnostics(settings));
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const runDiagnostics = () => {
     setIsRunningTest(true);
@@ -145,11 +159,26 @@ export function DiagnosticsModal({
 
   if (!isOpen) return null;
 
+  const isDarkMode =
+    typeof document !== 'undefined'
+      ? document.documentElement.classList.contains('dark')
+      : settings.themeMode === 'dark' || settings.themeMode === 'system';
+
+  const currentTheme = getTheme(settings.activeThemeId, isDarkMode);
+  const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
+  const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const rimClass = isLiquidGlass
+    ? 'liquid-specular-rim'
+    : isCupertino
+    ? 'cupertino-vibrancy-rim'
+    : '';
+
   const handleCopyReport = () => {
     const report = [
       '=== MediaPicker Pro Diagnostics Report ===',
       `Timestamp: ${new Date().toISOString()}`,
       `Runtime: ${isTauri() ? 'Tauri Desktop' : 'Web Browser Preview'}`,
+      `Theme: ${currentTheme.name} (${settings.themeMode})`,
       `User Agent: ${typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A'}`,
       '',
       '--- System Checks ---',
@@ -168,71 +197,95 @@ export function DiagnosticsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl text-slate-900 dark:text-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 theme-modal-backdrop animate-in fade-in duration-200"
+    >
+      <div
+        className={`relative w-full max-w-2xl theme-modal-window overflow-hidden flex flex-col max-h-[90vh] transition-all duration-200 ${rimClass}`}
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
+        <div className="flex items-center justify-between px-6 py-4 border-b theme-border theme-surface-subtle">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500">
+            <div className="p-2 rounded-xl theme-surface border theme-border theme-accent">
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Self-Test & Diagnostics Studio
+              <h2 className="text-base font-bold theme-heading theme-text">
+                Self-Test &amp; Diagnostics Studio
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs theme-text-secondary">
                 Verify runtime status, image pipeline, and test the applet directly
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 theme-btn theme-surface border theme-border theme-text-secondary hover:theme-text"
+            title="Close (Esc)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
+        {}
         {/* Modal Body */}
         <div className="p-6 space-y-6 overflow-y-auto text-left">
           {/* Quick Action: Test Right Here in Browser */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/30 space-y-3">
-            <div className="flex items-center justify-between">
+          <div
+            style={{
+              borderRadius: 'var(--theme-radius-card, 12px)',
+              borderColor: `rgba(${currentTheme.palette.accentRgb}, 0.35)`,
+              backgroundColor: `rgba(${currentTheme.palette.accentRgb}, 0.08)`,
+            }}
+            className={`p-4 border space-y-3 ${rimClass}`}
+          >
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-orange-500" />
-                <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 theme-accent" />
+                <span className="text-xs font-bold theme-heading theme-text uppercase tracking-wider">
                   Instant Test In Browser Preview
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-orange-500/20 text-orange-600 dark:text-orange-400 font-bold">
+              <span
+                style={{
+                  backgroundColor: `rgba(${currentTheme.palette.accentRgb}, 0.2)`,
+                  color: `rgb(${currentTheme.palette.accentRgb})`,
+                }}
+                className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold"
+              >
                 Zero Setup Needed
               </span>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              Load the complete sample media studio (8 high-resolution landscape, architecture, macro, and video samples) to test the gallery, slideshow, zooming, spacebar culling, and batch selection directly in this browser window.
+            <p className="text-xs theme-text-secondary leading-relaxed">
+              Load the complete sample media studio (8 high-resolution landscape, architecture,
+              macro, and video samples) to test the gallery, slideshow, zooming, spacebar culling,
+              and batch selection directly in this browser window.
             </p>
             <button
               onClick={() => {
                 onLoadDemoProject();
                 onClose();
               }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 shadow-md shadow-orange-600/20 transition-all hover:scale-[1.02]"
+              className="flex items-center gap-2 px-4 py-2 text-xs font-bold theme-btn-accent transition-all hover:scale-[1.01]"
             >
               <FolderOpen className="w-4 h-4" />
-              <span>Load & Review Sample Project Now</span>
+              <span>Load &amp; Review Sample Project Now</span>
             </button>
           </div>
 
           {/* Diagnostic Checks Grid */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                System Checks & Capabilities
+              <h3 className="text-xs font-bold theme-text-secondary uppercase tracking-wider">
+                System Checks &amp; Capabilities
               </h3>
               <button
                 onClick={runDiagnostics}
                 disabled={isRunningTest}
-                className="flex items-center gap-1 text-[11px] text-orange-500 hover:text-orange-400 font-medium"
+                className="flex items-center gap-1.5 text-[11px] theme-accent hover:underline font-semibold"
               >
                 <RefreshCw className={`w-3 h-3 ${isRunningTest ? 'animate-spin' : ''}`} />
                 <span>Re-run Checks</span>
@@ -243,47 +296,51 @@ export function DiagnosticsModal({
               {tests.map((test, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 flex items-start gap-2.5"
+                  style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+                  className="p-3 border theme-border theme-surface-subtle flex items-start gap-2.5"
                 >
                   {test.status === 'ok' ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   ) : test.status === 'warning' ? (
                     <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                   ) : (
-                    <Monitor className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
+                    <Monitor className="w-4 h-4 theme-accent shrink-0 mt-0.5" />
                   )}
                   <div className="space-y-0.5 min-w-0">
-                    <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                      {test.name}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                      {test.details}
-                    </p>
+                    <p className="text-xs font-semibold theme-text truncate">{test.name}</p>
+                    <p className="text-[11px] theme-text-secondary leading-tight">{test.details}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
+          {}
           {/* Diagnostic Console Log */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <Terminal className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-1.5 text-xs font-bold theme-text-secondary uppercase tracking-wider">
+                <Terminal className="w-3.5 h-3.5 theme-accent" />
                 <span>Diagnostic Event Log</span>
               </div>
               <button
                 onClick={handleCopyReport}
-                className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium"
+                className="flex items-center gap-1.5 text-[11px] theme-text-secondary hover:theme-text font-semibold"
               >
-                {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 theme-accent" />
+                )}
                 <span>{copied ? 'Copied!' : 'Copy Full Report'}</span>
               </button>
             </div>
-
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-slate-300 max-h-36 overflow-y-auto space-y-1">
+            <div
+              style={{ borderRadius: 'var(--theme-radius-card, 8px)' }}
+              className="p-3.5 theme-input font-mono text-[11px] max-h-36 overflow-y-auto space-y-1"
+            >
               {systemLog.map((log, i) => (
-                <div key={i} className="text-slate-400 leading-tight">
+                <div key={i} className="theme-text-secondary leading-tight">
                   {log}
                 </div>
               ))}
@@ -292,15 +349,15 @@ export function DiagnosticsModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
-          <span className="text-[11px] text-slate-500">
-            MediaPicker Pro v2.0.0 · Local First Studio
+        <div className="px-6 py-3.5 border-t theme-border theme-surface-subtle flex items-center justify-between">
+          <span className="text-[11px] theme-text-muted font-mono">
+            MediaPicker Pro v2.0.0 • {currentTheme.name}
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
+            className="px-4 py-1.5 text-xs font-semibold theme-btn theme-surface border theme-border theme-text"
           >
-            Close
+            Close (Esc)
           </button>
         </div>
       </div>

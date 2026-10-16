@@ -56,6 +56,7 @@ export interface FolderProject {
   galleryLayoutMode?: 'aspect' | 'square'; // default: 'aspect' (natural aspect ratio)
   gallerySortOption?: GallerySortOption;
   slideshowPaused?: boolean; // persist paused state across windows and views
+  slideshowControlsMode?: 'pinned' | 'autohide'; // default: 'pinned' (Always visible)
 }
 
 export interface AppSettings {
@@ -65,8 +66,10 @@ export interface AppSettings {
   videoSizeLimitMB: number; // default: 100
   itemsPerPage: number; // default: 1000
   controlsAutoHideMs: number; // default: 2500
+  slideshowControlsMode?: 'pinned' | 'autohide'; // default: 'pinned' (Always visible)
   neonAccent: 'orange' | 'green'; // default: 'orange'
   themeMode: 'dark' | 'light' | 'system';
+  activeThemeId?: string; // e.g. 'dark-default', 'obsidian-cinema', etc.
   clipboardFormat: 'newline' | 'comma' | 'filenames_only' | 'json';
   globalMuted: boolean;
   maxScanFilesLimit: number; // default: 50000

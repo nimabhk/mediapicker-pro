@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { FolderProject, MediaFileItem, AppSettings } from '@/lib/types';
 import { formatClipboardPaths } from '@/lib/zip-exporter';
 import { getMediaSourceUrl, isTauri } from '@/lib/tauri-bridge';
+import { getTheme } from '@/lib/themes';
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,12 +20,15 @@ import {
   Info,
   Sparkles,
   Undo2,
+  Redo2,
   LayoutGrid,
   RotateCcw,
   Home,
   CheckCheck,
   ZoomIn,
   ZoomOut,
+  Pin,
+  PinOff,
 } from 'lucide-react';
 
 interface SlideshowViewProps {
@@ -68,16 +72,14 @@ export function SlideshowView({
   const [isOSFullscreen, setIsOSFullscreen] = useState<boolean>(false);
   const [showControls, setShowControls] = useState<boolean>(true);
   const [undoStack, setUndoStack] = useState<{ index: number; prevSelected: boolean }[]>([]);
+  const [redoStack, setRedoStack] = useState<{ index: number; prevSelected: boolean }[]>([]);
 
-  // Center Splash Icon State
   const [splashIcon, setSplashIcon] = useState<{
     type: 'play' | 'pause' | 'volume-on' | 'volume-off';
     id: number;
   } | null>(null);
-
   const splashTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Trigger quick center splash
   const triggerSplash = useCallback((type: 'play' | 'pause' | 'volume-on' | 'volume-off') => {
     setSplashIcon({ type, id: Date.now() });
     if (splashTimerRef.current) clearTimeout(splashTimerRef.current);
@@ -86,20 +88,18 @@ export function SlideshowView({
     }, 600);
   }, []);
 
-  // Toggle and persist play/pause state
   const togglePlayPause = useCallback(() => {
     setIsPlaying((prev) => {
       const next = !prev;
       triggerSplash(next ? 'play' : 'pause');
-      onUpdateProject({
-        ...project,
-        slideshowPaused: !next,
-      });
       return next;
     });
-  }, [project, onUpdateProject, triggerSplash]);
+    onUpdateProject({
+      ...project,
+      slideshowPaused: isPlaying,
+    });
+  }, [project, isPlaying, onUpdateProject, triggerSplash]);
 
-  // Zoom & Pan state for current media (centered on mouse or Cmd+/-)
   const [zoomScale, setZoomScale] = useState<number>(1);
   const [zoomOffset, setZoomOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDraggingZoom, setIsDraggingZoom] = useState<boolean>(false);
@@ -116,15 +116,14 @@ export function SlideshowView({
   const slideTimerRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const currentItem = activeItems[currentIndex] as MediaFileItem | undefined;
 
-  // Generate or get objectUrl for current item
   const getMediaUrl = useCallback((item?: MediaFileItem): string => {
     if (!item) return '';
     return getMediaSourceUrl(item);
   }, []);
 
-  // Mark item as viewed in project state
   const markAsViewed = useCallback(
     (itemToMark?: MediaFileItem) => {
       if (!itemToMark) return;
@@ -153,24 +152,19 @@ export function SlideshowView({
     [project, currentIndex, onUpdateProject]
   );
 
-  // Navigation handlers
   const goToNext = useCallback(() => {
     if (activeItems.length === 0) return;
     if (isFinished) {
-      // If already on finished screen and user presses next, navigate to gallery!
       onOpenGallery();
       return;
     }
-
     if (currentIndex >= activeItems.length - 1) {
-      // Reached the end: show Finished Screen!
       setIsFinished(true);
       setIsPlaying(false);
       setZoomScale(1);
       setZoomOffset({ x: 0, y: 0 });
       return;
     }
-
     setZoomScale(1);
     setZoomOffset({ x: 0, y: 0 });
     setCurrentIndex((prev) => prev + 1);
@@ -181,45 +175,37 @@ export function SlideshowView({
     setZoomScale(1);
     setZoomOffset({ x: 0, y: 0 });
     if (isFinished) {
-      // Return back to last slide
       setIsFinished(false);
       setCurrentIndex(activeItems.length - 1);
       return;
     }
-
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
     }
   }, [activeItems.length, currentIndex, isFinished]);
 
-  // Toggle selection for current item
   const toggleSelectCurrent = useCallback(() => {
     if (isFinished || !currentItem) return;
     const prevSelected = currentItem.selected;
     const newSelected = !prevSelected;
 
-    // Push to undo stack
     setUndoStack((prev) => [...prev, { index: currentIndex, prevSelected }]);
+    setRedoStack([]);
 
     const newItems = project.items.map((i) =>
       i.id === currentItem.id ? { ...i, selected: newSelected } : i
     );
     const selectedCount = newItems.filter((i) => i.selected).length;
-
     onUpdateProject({
       ...project,
       items: newItems,
       selectedCount,
     });
-
     onShowToast(
-      newSelected
-        ? `Added to selection (${currentItem.name})`
-        : `Removed from selection`
+      newSelected ? `Added to selection (${currentItem.name})` : `Removed from selection`
     );
   }, [isFinished, currentItem, currentIndex, project, onUpdateProject, onShowToast]);
 
-  // Undo last selection
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) {
       onShowToast('Nothing to undo');
@@ -227,9 +213,12 @@ export function SlideshowView({
     }
     const lastAction = undoStack[undoStack.length - 1];
     setUndoStack((prev) => prev.slice(0, -1));
-
     const targetItem = activeItems[lastAction.index];
     if (targetItem) {
+      setRedoStack((prev) => [
+        ...prev,
+        { index: lastAction.index, prevSelected: targetItem.selected },
+      ]);
       const newItems = project.items.map((i) =>
         i.id === targetItem.id ? { ...i, selected: lastAction.prevSelected } : i
       );
@@ -245,7 +234,34 @@ export function SlideshowView({
     }
   }, [undoStack, activeItems, project, onUpdateProject, onShowToast]);
 
-  // Copy selected paths up to now to clipboard
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) {
+      onShowToast('Nothing to redo');
+      return;
+    }
+    const lastRedo = redoStack[redoStack.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+    const targetItem = activeItems[lastRedo.index];
+    if (targetItem) {
+      setUndoStack((prev) => [
+        ...prev,
+        { index: lastRedo.index, prevSelected: targetItem.selected },
+      ]);
+      const newItems = project.items.map((i) =>
+        i.id === targetItem.id ? { ...i, selected: lastRedo.prevSelected } : i
+      );
+      const selectedCount = newItems.filter((i) => i.selected).length;
+      onUpdateProject({
+        ...project,
+        items: newItems,
+        selectedCount,
+      });
+      setCurrentIndex(lastRedo.index);
+      setIsFinished(false);
+      onShowToast(`Selection redone (Cmd+Shift+Z)`);
+    }
+  }, [redoStack, activeItems, project, onUpdateProject, onShowToast]);
+
   const handleCopyClipboard = useCallback(async () => {
     const selectedItems = project.items.filter((i) => i.selected);
     if (selectedItems.length === 0) {
@@ -261,23 +277,25 @@ export function SlideshowView({
     }
   }, [project.items, settings.clipboardFormat, onShowToast]);
 
-  // Mark current index viewed whenever it changes
   useEffect(() => {
     if (!isFinished && currentItem) {
       markAsViewed(currentItem);
     }
   }, [currentIndex, isFinished, currentItem, markAsViewed]);
 
-  // Auto-hide controls timer on mouse inactivity
+  const isControlsPinned = project.slideshowControlsMode
+    ? project.slideshowControlsMode === 'pinned'
+    : settings.slideshowControlsMode !== 'autohide';
+
   const handleMouseMove = useCallback(() => {
     setShowControls(true);
+    if (isControlsPinned) return;
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => {
       setShowControls(false);
-    }, settings.controlsAutoHideMs);
-  }, [settings.controlsAutoHideMs]);
+    }, settings.controlsAutoHideMs || 2500);
+  }, [isControlsPinned, settings.controlsAutoHideMs]);
 
-  // Zoom helpers
   const resetZoom = useCallback(() => {
     setZoomScale(1);
     setZoomOffset({ x: 0, y: 0 });
@@ -288,8 +306,6 @@ export function SlideshowView({
     (delta: number, clientX?: number, clientY?: number) => {
       setZoomScale((prevScale) => {
         const newScale = Math.min(10, Math.max(1, +(prevScale + delta).toFixed(2)));
-
-        // If zooming in for the first time, pause slideshow
         if (prevScale === 1 && newScale > 1) {
           setIsPlaying(false);
           onUpdateProject({
@@ -298,36 +314,33 @@ export function SlideshowView({
           });
           triggerSplash('pause');
         }
-
         if (newScale === 1) {
           setZoomOffset({ x: 0, y: 0 });
           return 1;
         }
-
-        // Center on cursor if coords provided
         if (clientX !== undefined && clientY !== undefined && mediaContainerRef.current) {
           const rect = mediaContainerRef.current.getBoundingClientRect();
-          const mouseXRel = clientX - (rect.left + rect.width / 2);
-          const mouseYRel = clientY - (rect.top + rect.height / 2);
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
 
-          const scaleRatio = newScale / prevScale;
+          const cursorRelX = clientX - centerX;
+          const cursorRelY = clientY - centerY;
+          const ratio = newScale / prevScale;
+
           setZoomOffset((prevOffset) => ({
-            x: (prevOffset.x - mouseXRel) * scaleRatio + mouseXRel,
-            y: (prevOffset.y - mouseYRel) * scaleRatio + mouseYRel,
+            x: cursorRelX - (cursorRelX - prevOffset.x) * ratio,
+            y: cursorRelY - (cursorRelY - prevOffset.y) * ratio,
           }));
         }
-
         return newScale;
       });
     },
     [onUpdateProject, project, triggerSplash]
   );
 
-  // Wheel zoom handler directly on window or container
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (settings.wheelZoomEnabled === false || isFinished) return;
-      // Prevent page/window scrolling while zooming media
       e.preventDefault();
       const zoomDelta = e.deltaY < 0 ? 0.35 : -0.35;
       adjustZoom(zoomDelta, e.clientX, e.clientY);
@@ -342,7 +355,6 @@ export function SlideshowView({
     };
   }, [settings.wheelZoomEnabled, isFinished, adjustZoom]);
 
-  // Mouse drag panning when zoomed
   const handleMouseDown = (e: React.MouseEvent) => {
     if (zoomScale > 1) {
       setIsDraggingZoom(true);
@@ -378,7 +390,6 @@ export function SlideshowView({
     };
   }, [handleMouseMove]);
 
-  // Slideshow timer logic
   useEffect(() => {
     if (!isPlaying || isFinished || !currentItem) {
       if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
@@ -399,14 +410,20 @@ export function SlideshowView({
       videoTimerRef.current = setTimeout(() => {
         goToNext();
       }, maxDuration);
-
       return () => {
         if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
       };
     }
-  }, [currentIndex, isPlaying, isFinished, currentItem, settings.slideDurationSec, settings.videoMaxDurationSec, goToNext]);
+  }, [
+    currentIndex,
+    isPlaying,
+    isFinished,
+    currentItem,
+    settings.slideDurationSec,
+    settings.videoMaxDurationSec,
+    goToNext,
+  ]);
 
-  // Video playback management on index change
   useEffect(() => {
     if (!isFinished && currentItem?.type === 'video' && videoRef.current) {
       videoRef.current.currentTime = 0;
@@ -419,12 +436,17 @@ export function SlideshowView({
     }
   }, [currentIndex, isFinished, currentItem, isPlaying, settings.globalMuted]);
 
-  // Fullscreen toggle
   const toggleOSFullscreen = () => {
     if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen().then(() => setIsOSFullscreen(true)).catch(() => {});
+      containerRef.current
+        ?.requestFullscreen()
+        .then(() => setIsOSFullscreen(true))
+        .catch(() => {});
     } else {
-      document.exitFullscreen().then(() => setIsOSFullscreen(false)).catch(() => {});
+      document
+        .exitFullscreen()
+        .then(() => setIsOSFullscreen(false))
+        .catch(() => {});
     }
   };
 
@@ -436,23 +458,52 @@ export function SlideshowView({
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  // Keyboard Hotkeys
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+C / Ctrl+C
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
+      const isKeyZ =
+        e.key.toLowerCase() === 'z' ||
+        e.code === 'KeyZ' ||
+        e.keyCode === 90 ||
+        (e as any).which === 90 ||
+        e.key === 'ظ' ||
+        e.key === 'ئ';
+
+      const isKeyY =
+        e.key.toLowerCase() === 'y' ||
+        e.code === 'KeyY' ||
+        e.keyCode === 89 ||
+        (e as any).which === 89 ||
+        e.key === 'غ' ||
+        e.key === '؛';
+
+      const isKeyC =
+        e.key.toLowerCase() === 'c' ||
+        e.code === 'KeyC' ||
+        e.keyCode === 67 ||
+        (e as any).which === 67;
+
+      if ((e.metaKey || e.ctrlKey) && isKeyC) {
         e.preventDefault();
         handleCopyClipboard();
         return;
       }
-      // Cmd+Z / Ctrl+Z
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+
+      if ((e.metaKey || e.ctrlKey) && isKeyZ) {
         e.preventDefault();
-        handleUndo();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
         return;
       }
 
-      // Cmd/Ctrl + Plus / Equal / Minus / Zero (Zoom shortcuts)
+      if ((e.metaKey || e.ctrlKey) && isKeyY) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+
       if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+' || e.key === 'Add')) {
         e.preventDefault();
         adjustZoom(0.35);
@@ -470,7 +521,6 @@ export function SlideshowView({
       }
 
       switch (e.key) {
-        // ONLY Left and Right arrows navigate slides (ArrowUp/ArrowDown removed as requested)
         case 'ArrowRight':
           e.preventDefault();
           goToNext();
@@ -486,6 +536,17 @@ export function SlideshowView({
         case ' ':
           e.preventDefault();
           toggleSelectCurrent();
+          break;
+        case 'k':
+        case 'K':
+          if (currentItem?.type === 'video' && videoRef.current) {
+            e.preventDefault();
+            if (videoRef.current.paused) {
+              videoRef.current.play().catch(() => {});
+            } else {
+              videoRef.current.pause();
+            }
+          }
           break;
         case 'p':
         case 'P':
@@ -526,6 +587,8 @@ export function SlideshowView({
     toggleSelectCurrent,
     handleCopyClipboard,
     handleUndo,
+    handleRedo,
+    currentItem,
     onClose,
     onOpenGallery,
     settings.globalMuted,
@@ -536,13 +599,34 @@ export function SlideshowView({
     triggerSplash,
   ]);
 
+  const isDarkMode =
+    typeof document !== 'undefined'
+      ? document.documentElement.classList.contains('dark')
+      : settings.themeMode === 'dark' || settings.themeMode === 'system';
+
+  const currentTheme = getTheme(settings.activeThemeId, isDarkMode);
+  const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
+  const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const rimClass = isLiquidGlass
+    ? 'liquid-specular-rim'
+    : isCupertino
+    ? 'cupertino-vibrancy-rim'
+    : '';
+
   if (activeItems.length === 0) {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center text-white space-y-4">
-        <p>No playable media found in this project&apos;s active subfolders.</p>
-        <button onClick={onClose} className="px-4 py-2 bg-slate-800 rounded-lg text-sm">
-          Return to Dashboard
-        </button>
+      <div className="fixed inset-0 z-50 theme-slideshow-canvas flex flex-col items-center justify-center space-y-4 p-6">
+        <div className={`theme-modal-window p-8 text-center space-y-4 max-w-md ${rimClass}`}>
+          <p className="text-sm theme-text">
+            No playable media found in this project&apos;s active subfolders.
+          </p>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 theme-btn theme-surface border theme-border text-xs font-semibold theme-text"
+          >
+            Return to Dashboard
+          </button>
+        </div>
       </div>
     );
   }
@@ -551,125 +635,270 @@ export function SlideshowView({
   const total = activeItems.length;
   const percentViewed = Math.round(((currentIndex + 1) / total) * 100);
   const selectedCount = project.items.filter((i) => i.selected).length;
-
   const isSelected = currentItem?.selected || false;
-  const isOrangeAccent = settings.neonAccent === 'orange';
-
-  const neonOutlineClass = isSelected
-    ? isOrangeAccent
-      ? 'border-2 border-orange-500 shadow-[0_0_35px_rgba(249,115,22,0.7)] ring-2 ring-orange-400/80'
-      : 'border-2 border-emerald-500 shadow-[0_0_35px_rgba(16,185,129,0.7)] ring-2 ring-emerald-400/80'
-    : 'border border-transparent';
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-black flex flex-col justify-between overflow-hidden select-none cursor-default font-sans"
+      className={`fixed inset-0 z-50 theme-slideshow-canvas flex flex-col justify-between overflow-hidden select-none cursor-default font-sans transition-colors duration-300 ${
+        isLiquidGlass
+          ? 'liquid-glass-backdrop'
+          : isCupertino
+          ? 'cupertino-frosted-backdrop'
+          : ''
+      }`}
       onMouseMove={handleMouseMove}
       onClick={(e) => {
         if (isFinished) return;
+        if (zoomScale > 1) return;
         const target = e.target as HTMLElement;
         if (target.closest('button') || target.closest('a') || target.closest('input')) {
+          return;
+        }
+        const clientY = e.clientY;
+        const clientX = e.clientX;
+        const windowHeight = window.innerHeight;
+        const windowWidth = window.innerWidth;
+        if (
+          clientY < 80 ||
+          clientY > windowHeight - 90 ||
+          clientX < 90 ||
+          clientX > windowWidth - 90
+        ) {
           return;
         }
         toggleSelectCurrent();
       }}
     >
+      {/* Dynamic Optical Refraction & Media Ambient Bleed Layer */}
+      {(isLiquidGlass || isCupertino) && (
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          {/* Active Slide Color Bleed into the Frosted Glass / Glacier Ice */}
+          {!isFinished && currentItem?.type === 'image' && mediaUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={mediaUrl}
+              alt=""
+              aria-hidden="true"
+              className={`w-full h-full object-cover scale-125 transition-all duration-700 ${
+                isLiquidGlass
+                  ? 'blur-[95px] saturate-[220%] opacity-30 dark:opacity-35'
+                  : 'blur-[110px] saturate-[190%] opacity-25 dark:opacity-30'
+              }`}
+            />
+          )}
+
+          {/* Theme-Specific Optical Caustics & Specular Ice Sheen */}
+          {isLiquidGlass ? (
+            <>
+              <div
+                className="absolute -top-32 left-1/4 w-[700px] h-[380px] rounded-full blur-[120px] opacity-35"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(0, 210, 255, 0.55) 0%, rgba(56, 189, 248, 0.18) 60%, transparent 100%)',
+                }}
+              />
+              <div
+                className="absolute -bottom-32 right-1/4 w-[650px] h-[420px] rounded-full blur-[130px] opacity-30"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(125, 235, 255, 0.45) 0%, rgba(99, 102, 241, 0.2) 65%, transparent 100%)',
+                }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(0, 210, 255, 0.03) 45%, transparent 60%, rgba(125, 235, 255, 0.06) 100%)',
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <div
+                className="absolute -top-40 left-1/3 w-[720px] h-[380px] rounded-full blur-[130px] opacity-25"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(10, 132, 255, 0.45) 0%, transparent 75%)',
+                }}
+              />
+              <div
+                className="absolute -bottom-36 right-1/4 w-[620px] h-[380px] rounded-full blur-[130px] opacity-20"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(94, 92, 230, 0.38) 0%, transparent 75%)',
+                }}
+              />
+            </>
+          )}
+        </div>
+      )}
+
       {/* Center Animated Splash Icon (Play / Pause / Mute / Unmute) */}
       {splashIcon && (
         <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center animate-in zoom-in-50 fade-in duration-150">
-          <div className="p-6 rounded-3xl bg-black/80 backdrop-blur-xl border border-white/20 shadow-2xl text-white flex items-center justify-center">
-            {splashIcon.type === 'play' && <Play className="w-14 h-14 text-emerald-400 fill-emerald-400" />}
-            {splashIcon.type === 'pause' && <Pause className="w-14 h-14 text-amber-400 fill-amber-400" />}
+          <div className={`p-6 theme-modal-window flex items-center justify-center ${rimClass}`}>
+            {splashIcon.type === 'play' && (
+              <Play className="w-14 h-14 text-emerald-400 fill-emerald-400" />
+            )}
+            {splashIcon.type === 'pause' && (
+              <Pause className="w-14 h-14 text-amber-400 fill-amber-400" />
+            )}
             {splashIcon.type === 'volume-on' && <Volume2 className="w-14 h-14 text-emerald-400" />}
-            {splashIcon.type === 'volume-off' && <VolumeX className="w-14 h-14 text-slate-400" />}
+            {splashIcon.type === 'volume-off' && (
+              <VolumeX className="w-14 h-14 theme-text-secondary" />
+            )}
           </div>
         </div>
       )}
 
-      {/* 1. TOPMOST PROGRESS BAR (Always visible in top layer) */}
-      <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none">
+      {/* 1. TOPMOST PROGRESS BAR & HUD METRICS */}
+      <div className="relative z-40 pointer-events-none">
         {/* Progress Fill Line */}
-        <div className="w-full h-1.5 bg-slate-900/60 backdrop-blur-sm">
+        <div className="w-full h-1.5 theme-surface-subtle overflow-hidden">
           <div
-            className={`h-full transition-all duration-300 ease-out ${
-              isOrangeAccent
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.8)]'
-                : 'bg-gradient-to-r from-teal-500 to-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]'
-            }`}
-            style={{ width: isFinished ? '100%' : `${percentViewed}%` }}
+            className="h-full transition-all duration-300 ease-out"
+            style={{
+              width: isFinished ? '100%' : `${percentViewed}%`,
+              backgroundColor: `rgb(${currentTheme.palette.accentRgb})`,
+              boxShadow: 'var(--theme-glow)',
+            }}
           />
         </div>
 
-        {/* Top HUD Metrics Bar (fades with controls) */}
+        {/* Top HUD Metrics Bar */}
         <div
-          className={`flex items-center justify-between px-6 py-2.5 text-xs transition-opacity duration-300 pointer-events-auto ${
-            showControls ? 'opacity-100' : 'opacity-0'
+          className={`flex items-center justify-between px-4 sm:px-6 py-2.5 text-xs transition-opacity duration-300 pointer-events-auto gap-2 flex-wrap ${
+            showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         >
           {/* Left: Project title & Progress */}
-          <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 text-slate-200">
-            <span className="font-semibold text-white truncate max-w-[200px]">{project.name}</span>
-            <span className="text-white/30">|</span>
-            <span className="font-mono tabular-nums text-slate-300">
+          <div
+            className={`flex items-center gap-2.5 px-3.5 py-1.5 theme-hud-dock ${rimClass}`}
+          >
+            <span className="font-bold theme-heading theme-text truncate max-w-[180px] sm:max-w-[240px]">
+              {project.name}
+            </span>
+            <span className="opacity-30">|</span>
+            <span className="font-mono tabular-nums theme-text-secondary">
               {isFinished ? total : currentIndex + 1} / {total}
             </span>
-            <span className="text-white/30">|</span>
-            <span className="font-mono tabular-nums text-slate-300 font-semibold">
+            <span className="opacity-30">|</span>
+            <span className="font-mono tabular-nums font-bold theme-accent">
               {isFinished ? '100%' : `${percentViewed}%`}
             </span>
           </div>
 
           {/* Center: Selected Counter Indicator */}
           <div
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border backdrop-blur-md transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 transition-all ${
               selectedCount > 0
-                ? isOrangeAccent
-                  ? 'border-orange-500/50 bg-orange-950/40 text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.3)]'
-                  : 'border-emerald-500/50 bg-emerald-950/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                : 'border-white/10 bg-black/60 text-slate-400'
+                ? 'theme-btn-accent font-bold'
+                : `theme-hud-dock theme-text-secondary ${rimClass}`
             }`}
+            style={{ borderRadius: 'var(--theme-radius-hud, 9999px)' }}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">
-              {selectedCount} Selected
-            </span>
+            <span className="text-xs">{selectedCount} Selected</span>
           </div>
 
           {/* Right: Quick Control Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleCopyClipboard();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/90 text-slate-200 hover:text-white border border-white/10 text-xs backdrop-blur-md transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium theme-hud-dock theme-btn ${rimClass}`}
               title="Copy All Selected Paths (Cmd+C)"
             >
-              <Copy className="w-3.5 h-3.5 text-slate-300" />
+              <Copy className="w-3.5 h-3.5 theme-accent" />
               <span className="hidden sm:inline">Copy Paths (Cmd+C)</span>
             </button>
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUndo();
-              }}
-              className="p-1.5 rounded-full bg-black/60 hover:bg-black/90 text-slate-300 hover:text-white border border-white/10 text-xs backdrop-blur-md transition-colors"
-              title="Undo Last Action (Cmd+Z)"
-            >
-              <Undo2 className="w-4 h-4" />
-            </button>
+            {/* Visual Undo & Redo Capsule */}
+            <div className={`flex items-center gap-1 p-0.5 theme-hud-dock text-xs ${rimClass}`}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleUndo();
+                }}
+                disabled={undoStack.length === 0}
+                className="flex items-center gap-1 px-2.5 py-1 theme-btn theme-text disabled:opacity-35 disabled:pointer-events-none"
+                title="Undo last selection change (Cmd+Z / Ctrl+Z)"
+              >
+                <Undo2 className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[11px] font-semibold hidden md:inline">Undo</span>
+                {undoStack.length > 0 && (
+                  <span className="text-[10px] text-amber-500 font-mono font-bold bg-amber-500/20 px-1 rounded">
+                    {undoStack.length}
+                  </span>
+                )}
+              </button>
+              <div className="w-px h-3.5 theme-border bg-current opacity-20" />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRedo();
+                }}
+                disabled={redoStack.length === 0}
+                className="flex items-center gap-1 px-2.5 py-1 theme-btn theme-text disabled:opacity-35 disabled:pointer-events-none"
+                title="Redo last undone change (Cmd+Shift+Z / Ctrl+Shift+Z / Cmd+Y)"
+              >
+                <Redo2 className="w-3.5 h-3.5 theme-accent" />
+                <span className="text-[11px] font-semibold hidden md:inline">Redo</span>
+                {redoStack.length > 0 && (
+                  <span className="text-[10px] theme-accent font-mono font-bold bg-cyan-500/20 px-1 rounded">
+                    {redoStack.length}
+                  </span>
+                )}
+              </button>
+            </div>
 
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenGallery();
               }}
-              className="p-1.5 rounded-full bg-black/60 hover:bg-black/90 text-slate-300 hover:text-white border border-white/10 text-xs backdrop-blur-md transition-colors"
+              className={`p-1.5 theme-hud-dock theme-btn ${rimClass}`}
               title="Switch to Gallery Grid View (Backspace)"
             >
               <LayoutGrid className="w-4 h-4" />
+            </button>
+
+            {/* Pinned vs Auto-Hide Controls Toggle Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const newMode = isControlsPinned ? 'autohide' : 'pinned';
+                onUpdateProject({
+                  ...project,
+                  slideshowControlsMode: newMode,
+                });
+                onUpdateSettings({
+                  slideshowControlsMode: newMode,
+                });
+                onShowToast(
+                  newMode === 'pinned'
+                    ? 'Controls Pinned: Always Visible'
+                    : 'Controls Auto-Hide: Fades out on mouse rest'
+                );
+              }}
+              className={`p-1.5 text-xs transition-all ${
+                isControlsPinned
+                  ? 'theme-btn-accent'
+                  : `theme-hud-dock theme-btn theme-text-secondary ${rimClass}`
+              }`}
+              style={{ borderRadius: 'var(--theme-radius-hud, 9999px)' }}
+              title={
+                isControlsPinned
+                  ? 'Controls Mode: Always Visible (Pinned). Click to switch to Auto-Hide.'
+                  : 'Controls Mode: Auto-Hide. Click to switch to Always Visible (Pinned).'
+              }
+            >
+              {isControlsPinned ? <Pin className="w-4 h-4" /> : <PinOff className="w-4 h-4" />}
             </button>
 
             <button
@@ -677,7 +906,7 @@ export function SlideshowView({
                 e.stopPropagation();
                 onClose();
               }}
-              className="p-1.5 rounded-full bg-black/60 hover:bg-rose-900/60 text-slate-300 hover:text-white border border-white/10 hover:border-rose-500/50 text-xs backdrop-blur-md transition-colors"
+              className={`p-1.5 theme-hud-dock theme-btn hover:!border-rose-500/60 hover:!text-rose-500 ${rimClass}`}
               title="Exit Slideshow (Esc)"
             >
               <X className="w-4 h-4" />
@@ -687,14 +916,14 @@ export function SlideshowView({
       </div>
 
       {/* 2. MAIN MEDIA STAGE OR END SCREEN */}
-      <div className="relative flex-1 w-full h-full flex items-center justify-center p-2 sm:p-6 overflow-hidden">
+      <div className="relative z-20 flex-1 w-full h-full flex items-center justify-center p-2 sm:p-6 overflow-hidden">
         {/* Navigation Arrow Left (Previous) */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             goToPrev();
           }}
-          className={`absolute left-4 z-30 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white/80 hover:text-white border border-white/10 backdrop-blur-md transition-all duration-200 hover:scale-110 ${
+          className={`absolute left-4 z-30 p-3 theme-hud-dock theme-btn transition-all duration-200 hover:scale-110 ${rimClass} ${
             showControls ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'
           }`}
           title="Previous Slide (Left Arrow)"
@@ -704,31 +933,31 @@ export function SlideshowView({
 
         {isFinished ? (
           /* Slideshow Finished Screen */
-          <div className="z-20 max-w-lg w-full p-8 rounded-3xl bg-slate-900/90 border border-slate-700/80 backdrop-blur-2xl shadow-2xl text-center space-y-6 animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
+          <div
+            className={`z-20 max-w-lg w-full p-8 theme-modal-window text-center space-y-6 animate-in zoom-in-95 duration-200 ${rimClass}`}
+          >
+            <div className="w-16 h-16 rounded-2xl theme-surface-subtle border theme-border flex items-center justify-center theme-accent mx-auto shadow-inner">
               <CheckCheck className="w-8 h-8" />
             </div>
-
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white">Slideshow Completed!</h2>
-              <p className="text-sm text-slate-400">
+              <h2 className="text-2xl font-bold theme-heading theme-text">Slideshow Completed!</h2>
+              <p className="text-sm theme-text-secondary">
                 You have reviewed all {total} media items in this session.
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex justify-around text-xs">
+            <div className="p-4 rounded-xl theme-surface-subtle border theme-border flex justify-around text-xs">
               <div>
-                <span className="block text-slate-500">Reviewed</span>
-                <span className="font-mono text-lg font-bold text-white">{total}</span>
+                <span className="block theme-text-muted">Reviewed</span>
+                <span className="font-mono text-lg font-bold theme-text">{total}</span>
               </div>
-              <div className="w-px bg-slate-800" />
+              <div className="w-px theme-border bg-current opacity-20" />
               <div>
-                <span className="block text-slate-500">Selected</span>
-                <span className="font-mono text-lg font-bold text-emerald-400">{selectedCount}</span>
+                <span className="block theme-text-muted">Selected</span>
+                <span className="font-mono text-lg font-bold theme-accent">{selectedCount}</span>
               </div>
             </div>
 
-            {/* Mouse Clickable Choice Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
               <button
                 onClick={() => {
@@ -736,48 +965,63 @@ export function SlideshowView({
                   setIsFinished(false);
                   setIsPlaying(true);
                 }}
-                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-white transition-all shadow-md ${
-                  isOrangeAccent
-                    ? 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/30'
-                    : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
-                }`}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold theme-btn-accent"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Restart</span>
               </button>
-
               <button
                 onClick={onOpenGallery}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold theme-surface border theme-border theme-btn theme-text"
                 title="Switch to Gallery (Right Arrow)"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
                 <span>Gallery</span>
               </button>
-
               <button
                 onClick={onClose}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold theme-surface border theme-border theme-btn theme-text"
               >
                 <Home className="w-3.5 h-3.5" />
                 <span>Menu</span>
               </button>
             </div>
 
-            <p className="text-[11px] text-slate-500">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">Right Arrow</kbd> to jump to gallery, or <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">Left Arrow</kbd> to review previous slide.
+            <p className="text-[11px] theme-text-muted">
+              Press{' '}
+              <kbd className="px-1.5 py-0.5 rounded theme-surface border theme-border font-mono theme-text">
+                Right Arrow
+              </kbd>{' '}
+              to jump to gallery, or{' '}
+              <kbd className="px-1.5 py-0.5 rounded theme-surface border theme-border font-mono theme-text">
+                Left Arrow
+              </kbd>{' '}
+              to review previous slide.
             </p>
           </div>
         ) : (
-          /* Active Media Frame with Native 100% Scale, Smooth Zoom, Pan & Magic Glow */
+          /* Active Media Frame with Native 100% Scale, Smooth Zoom, Pan & Theme Glow */
           <div
             ref={mediaContainerRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleGlobalMouseMove}
             onMouseUp={handleMouseUp}
-            className={`relative max-w-full max-h-full rounded-xl transition-all duration-300 flex items-center justify-center overflow-hidden ${
+            style={{
+              borderRadius: 'var(--theme-radius-card, 8px)',
+              outline: isSelected
+                ? `3px solid rgb(${currentTheme.palette.accentRgb})`
+                : isLiquidGlass
+                ? '1px solid rgba(125, 235, 255, 0.38)'
+                : isCupertino
+                ? '1px solid rgba(255, 255, 255, 0.16)'
+                : 'none',
+              boxShadow: isSelected
+                ? 'var(--theme-glow), var(--theme-elevated-shadow)'
+                : 'var(--theme-elevated-shadow)',
+            }}
+            className={`relative max-w-full max-h-full transition-all duration-300 flex items-center justify-center overflow-hidden ${
               zoomScale > 1 ? 'cursor-grab active:cursor-grabbing' : ''
-            } ${neonOutlineClass}`}
+            }`}
           >
             <div
               style={{
@@ -809,7 +1053,9 @@ export function SlideshowView({
                       target.src = currentItem.demoSvgUrl;
                     }
                   }}
-                  className="max-w-[95vw] max-h-[82vh] object-contain rounded-lg shadow-2xl select-none pointer-events-auto"
+                  className={`${
+                    zoomScale > 1 ? 'max-w-none max-h-none' : 'max-w-[95vw] max-h-[80vh]'
+                  } object-contain select-none pointer-events-auto`}
                   draggable={false}
                 />
               ) : currentItem ? (
@@ -821,7 +1067,9 @@ export function SlideshowView({
                   autoPlay={isPlaying}
                   loop
                   muted={settings.globalMuted}
-                  className="max-w-[95vw] max-h-[82vh] object-contain rounded-lg shadow-2xl select-none"
+                  className={`${
+                    zoomScale > 1 ? 'max-w-none max-h-none' : 'max-w-[95vw] max-h-[80vh]'
+                  } object-contain select-none`}
                   onEnded={() => {
                     if (isPlaying) goToNext();
                   }}
@@ -829,17 +1077,11 @@ export function SlideshowView({
               ) : null}
             </div>
 
-            {/* Magic Badge on Media when Selected */}
+            {/* Selected Badge on Media */}
             {isSelected && (
-              <div
-                className={`absolute top-4 right-4 z-20 px-3 py-1.5 rounded-lg backdrop-blur-md text-xs font-bold text-white flex items-center gap-1.5 shadow-lg animate-in zoom-in-75 duration-200 ${
-                  isOrangeAccent
-                    ? 'bg-orange-600/90 shadow-orange-600/40 border border-orange-400'
-                    : 'bg-emerald-600/90 shadow-emerald-600/40 border border-emerald-400'
-                }`}
-              >
+              <div className="absolute top-4 right-4 z-20 px-3 py-1.5 theme-btn-accent text-xs font-bold flex items-center gap-1.5 animate-in zoom-in-75 duration-200">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Selected</span>
+                <span>{currentTheme.id === 'theme-1-obsidian-culler' ? 'CULLED' : 'Selected'}</span>
               </div>
             )}
           </div>
@@ -851,7 +1093,7 @@ export function SlideshowView({
             e.stopPropagation();
             goToNext();
           }}
-          className={`absolute right-4 z-30 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white/80 hover:text-white border border-white/10 backdrop-blur-md transition-all duration-200 hover:scale-110 ${
+          className={`absolute right-4 z-30 p-3 theme-hud-dock theme-btn transition-all duration-200 hover:scale-110 ${rimClass} ${
             showControls ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
           }`}
           title={isFinished ? 'Go to Gallery (Right Arrow)' : 'Next Slide (Right Arrow)'}
@@ -863,24 +1105,22 @@ export function SlideshowView({
       {/* 3. BOTTOM CONTROL HUD & FILE INFO */}
       {!isFinished && currentItem && (
         <div
-          className={`relative z-30 w-full transition-opacity duration-300 pb-3 pt-2 px-6 flex flex-col items-center gap-2 ${
+          className={`relative z-30 w-full transition-opacity duration-300 pb-3 pt-1 px-4 sm:px-6 flex flex-col items-center gap-2 ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         >
           {/* Floating Center Controls Deck */}
-          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-black/75 backdrop-blur-xl border border-white/10 shadow-2xl text-white">
+          <div className={`flex items-center gap-2 px-4 py-2 theme-hud-dock ${rimClass}`}>
             {/* Selection Toggle Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 toggleSelectCurrent();
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-all ${
                 isSelected
-                  ? isOrangeAccent
-                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/50'
-                    : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/50'
-                  : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                  ? 'theme-btn-accent font-bold'
+                  : 'theme-btn theme-surface-subtle border theme-border theme-text'
               }`}
               title="Toggle Selection (Spacebar or Left-Click)"
             >
@@ -888,7 +1128,7 @@ export function SlideshowView({
               <span>{isSelected ? 'Selected (Space)' : 'Select Slide (Space)'}</span>
             </button>
 
-            <span className="w-px h-5 bg-white/20 mx-1" />
+            <span className="w-px h-5 theme-border bg-current opacity-20 mx-0.5" />
 
             {/* Play / Pause Toggle */}
             <button
@@ -896,10 +1136,14 @@ export function SlideshowView({
                 e.stopPropagation();
                 togglePlayPause();
               }}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors"
+              className="p-2 theme-btn theme-surface-subtle border theme-border theme-text"
               title={isPlaying ? 'Pause Slideshow (Enter / P)' : 'Resume Slideshow (Enter / P)'}
             >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-emerald-400" />}
+              {isPlaying ? (
+                <Pause className="w-4 h-4" />
+              ) : (
+                <Play className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+              )}
             </button>
 
             {/* Sound Mute Toggle */}
@@ -909,13 +1153,13 @@ export function SlideshowView({
                 onUpdateSettings({ globalMuted: !settings.globalMuted });
                 triggerSplash(settings.globalMuted ? 'volume-on' : 'volume-off');
               }}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors"
+              className="p-2 theme-btn theme-surface-subtle border theme-border theme-text"
               title={settings.globalMuted ? 'Muted (M)' : 'Audio Active (M)'}
             >
               {settings.globalMuted ? (
-                <VolumeX className="w-4 h-4 text-slate-400" />
+                <VolumeX className="w-4 h-4 theme-text-muted" />
               ) : (
-                <Volume2 className="w-4 h-4 text-emerald-400" />
+                <Volume2 className="w-4 h-4 text-emerald-500" />
               )}
             </button>
 
@@ -925,48 +1169,53 @@ export function SlideshowView({
                 e.stopPropagation();
                 toggleOSFullscreen();
               }}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-colors"
+              className="p-2 theme-btn theme-surface-subtle border theme-border theme-text"
               title="Toggle OS Fullscreen (F)"
             >
-              {isOSFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {isOSFullscreen ? (
+                <Minimize2 className="w-4 h-4" />
+              ) : (
+                <Maximize2 className="w-4 h-4" />
+              )}
             </button>
 
-            <span className="w-px h-5 bg-white/20 mx-1" />
+            <span className="w-px h-5 theme-border bg-current opacity-20 mx-0.5" />
 
             {/* Dedicated Zoom Controls (Cmd + / -) */}
-            <div className="flex items-center gap-1 bg-white/5 rounded-xl p-0.5 border border-white/10">
+            <div
+              style={{ borderRadius: 'var(--theme-radius-btn, 8px)' }}
+              className="flex items-center gap-1 theme-surface-subtle p-0.5 border theme-border"
+            >
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   adjustZoom(-0.35);
                 }}
                 disabled={zoomScale <= 1}
-                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/15 disabled:opacity-40 transition-colors"
+                className="p-1.5 theme-btn theme-text disabled:opacity-35"
                 title="Zoom Out (Cmd -)"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
-
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   resetZoom();
                 }}
-                className={`px-2 py-0.5 rounded-md font-mono text-[11px] tabular-nums font-semibold transition-all ${
-                  zoomScale > 1 ? 'text-amber-400 bg-amber-400/10' : 'text-slate-400'
+                className={`px-2 py-0.5 rounded font-mono text-[11px] tabular-nums font-bold transition-all ${
+                  zoomScale > 1 ? 'theme-accent bg-cyan-500/15' : 'theme-text-secondary'
                 }`}
                 title="Reset Zoom Scale (Cmd 0)"
               >
                 {Math.round(zoomScale * 100)}%
               </button>
-
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   adjustZoom(0.35);
                 }}
                 disabled={zoomScale >= 10}
-                className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/15 disabled:opacity-40 transition-colors"
+                className="p-1.5 theme-btn theme-text disabled:opacity-35"
                 title="Zoom In (Cmd +)"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
@@ -975,15 +1224,20 @@ export function SlideshowView({
           </div>
 
           {/* File Path & Metadata Info Box under image */}
-          <div className="bg-black/70 backdrop-blur-md px-4 py-1.5 rounded-xl border border-white/10 flex items-center gap-3 text-xs max-w-4xl text-slate-300">
-            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="font-semibold text-white truncate max-w-xs">{currentItem.name}</span>
-            <span className="text-white/20">|</span>
-            <span className="font-mono text-slate-400 truncate max-w-lg" title={currentItem.relativePath}>
+          <div
+            className={`px-4 py-1.5 theme-hud-dock flex items-center gap-2.5 text-xs max-w-4xl ${rimClass}`}
+          >
+            <Info className="w-3.5 h-3.5 theme-accent shrink-0" />
+            <span className="font-semibold theme-text truncate max-w-xs">{currentItem.name}</span>
+            <span className="opacity-25">|</span>
+            <span
+              className="font-mono theme-text-secondary truncate max-w-lg hidden sm:inline"
+              title={currentItem.relativePath}
+            >
               {currentItem.relativePath}
             </span>
-            <span className="text-white/20">|</span>
-            <span className="font-mono tabular-nums text-slate-400 shrink-0">
+            <span className="opacity-25 hidden sm:inline">|</span>
+            <span className="font-mono tabular-nums theme-text-muted shrink-0">
               {(currentItem.size / (1024 * 1024)).toFixed(1)} MB
             </span>
           </div>

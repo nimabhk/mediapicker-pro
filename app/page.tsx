@@ -21,7 +21,7 @@ import {
 import { processFileList, scanDirectoryHandle } from '@/lib/file-scanner';
 import { generateDemoProject } from '@/lib/demo-data';
 import { isTauri, pickFolderNative, scanDirectoryNative } from '@/lib/tauri-bridge';
-
+import { getTheme } from '@/lib/themes';
 import { Header } from '@/components/Header';
 import { ProjectList } from '@/components/ProjectList';
 import { SlideshowView } from '@/components/SlideshowView';
@@ -35,12 +35,20 @@ import { DiagnosticsModal } from '@/components/DiagnosticsModal';
 
 export default function HomePage() {
   const [settings, setSettings] = useState<AppSettings>(() => {
-    return typeof window !== 'undefined' ? loadSettings() : DEFAULT_SETTINGS;
+    if (typeof window !== 'undefined') {
+      return loadSettings();
+    }
+    return DEFAULT_SETTINGS;
   });
+
   const [projects, setProjects] = useState<FolderProject[]>(() => [generateDemoProject()]);
   const [trashRecords, setTrashRecords] = useState<TrashRecord[]>(() => {
-    return typeof window !== 'undefined' ? loadTrashRecords() : [];
+    if (typeof window !== 'undefined') {
+      return loadTrashRecords();
+    }
+    return [];
   });
+
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [slideshowStartIndex, setSlideshowStartIndex] = useState<number>(0);
@@ -54,7 +62,6 @@ export default function HomePage() {
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState<boolean>(false);
   const [actionProject, setActionProject] = useState<FolderProject | null>(null);
 
-  // Load / reload demo project for instant in-browser test
   const handleLoadDemoProject = () => {
     const freshDemo = generateDemoProject();
     setProjects((prev) => {
@@ -74,31 +81,41 @@ export default function HomePage() {
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   // Undo stack
-  const [undoHistory, setUndoHistory] = useState<
+  const [, setUndoHistory] = useState<
     { description: string; projectId: string; prevItems: MediaFileItem[] }[]
   >([]);
 
-  // Update theme class on HTML element
+  // Track effective Dark / Light mode state
+  const [isDark, setIsDark] = useState<boolean>(true);
+
+  // Update theme class and data-theme on HTML element
   useEffect(() => {
     const root = document.documentElement;
+    const currentTheme = getTheme(settings.activeThemeId);
+    root.setAttribute('data-theme', currentTheme.id);
+
+    const applyDark = (dark: boolean) => {
+      setIsDark(dark);
+      if (dark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    };
+
     if (settings.themeMode === 'dark') {
-      root.classList.add('dark');
+      applyDark(true);
     } else if (settings.themeMode === 'light') {
-      root.classList.remove('dark');
+      applyDark(false);
     } else {
-      // System
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const applySystemTheme = () => {
-        if (mediaQuery.matches) root.classList.add('dark');
-        else root.classList.remove('dark');
-      };
-      applySystemTheme();
+      applyDark(mediaQuery.matches);
+      const applySystemTheme = () => applyDark(mediaQuery.matches);
       mediaQuery.addEventListener('change', applySystemTheme);
       return () => mediaQuery.removeEventListener('change', applySystemTheme);
     }
-  }, [settings.themeMode]);
+  }, [settings.themeMode, settings.activeThemeId]);
 
-  // Global key listener for '?' to open shortcuts cheatsheet
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeElem = document.activeElement;
@@ -126,29 +143,34 @@ export default function HomePage() {
     saveSettings(updated);
   };
 
-  // 1. Add folder intake logic
   const handleOpenFolderPicker = async () => {
-    // If running in Tauri native runtime, use native dialog and multi-threaded Rust scanner
     if (isTauri()) {
       try {
         const selectedPath = await pickFolderNative();
-        if (!selectedPath) return; // User cancelled
+        if (!selectedPath) return;
         showToast(`Scanning files natively in ${selectedPath}...`);
+
         const scanResult = await scanDirectoryNative(
           selectedPath,
           settings.maxScanFilesLimit || 50000,
           settings.includeHiddenFiles !== false
         );
+
         if (!scanResult) return;
+
         if (scanResult.limitReached) {
           showToast(
-            `Limit reached: Scanned ${scanResult.totalFilesCount.toLocaleString()} files (max ${settings.maxScanFilesLimit || 50000}).`
+            `Limit reached: Scanned ${scanResult.totalFilesCount.toLocaleString()} files (max ${
+              settings.maxScanFilesLimit || 50000
+            }).`
           );
         }
+
         if (scanResult.items.length === 0) {
           showToast('No photos or videos found in this folder.');
           return;
         }
+
         integrateNewProject(
           scanResult.folderName,
           scanResult.items,
@@ -173,7 +195,6 @@ export default function HomePage() {
         // @ts-ignore
         const dirHandle: FileSystemDirectoryHandle = await window.showDirectoryPicker();
         showToast('Scanning files inside folder recursively...');
-
         const result = await scanDirectoryHandle(
           dirHandle,
           settings.imageSizeLimitMB,
@@ -181,16 +202,17 @@ export default function HomePage() {
           settings.maxScanFilesLimit || 50000,
           settings.includeHiddenFiles !== false
         );
-
         if (result.limitReached) {
-          showToast(`Limit reached: Scanned ${result.totalFiles.toLocaleString()} files (max ${settings.maxScanFilesLimit || 50000}). Remainder skipped.`);
+          showToast(
+            `Limit reached: Scanned ${result.totalFiles.toLocaleString()} files (max ${
+              settings.maxScanFilesLimit || 50000
+            }). Remainder skipped.`
+          );
         }
-
         if (result.mediaItems.length === 0) {
           showToast('No photos or videos found in this folder.');
           return;
         }
-
         integrateNewProject(
           result.projectName,
           result.mediaItems,
@@ -208,7 +230,6 @@ export default function HomePage() {
       }
     }
 
-    // Universal fallback: trigger hidden directory input
     if (folderInputRef.current) {
       folderInputRef.current.value = '';
       folderInputRef.current.click();
@@ -230,7 +251,11 @@ export default function HomePage() {
       );
 
       if (result.limitReached) {
-        showToast(`Limit reached: Scanned ${result.totalFiles.toLocaleString()} files (max ${settings.maxScanFilesLimit || 50000}). Remainder skipped.`);
+        showToast(
+          `Limit reached: Scanned ${result.totalFiles.toLocaleString()} files (max ${
+            settings.maxScanFilesLimit || 50000
+          }). Remainder skipped.`
+        );
       }
 
       if (result.mediaItems.length === 0) {
@@ -254,12 +279,10 @@ export default function HomePage() {
     }
   };
 
-  // 2. Handle Manual Folder Path input
   const handleManualPathSubmit = async (path: string) => {
     const cleanPath = path.trim().replace(/\\/g, '/');
     const folderName = cleanPath.split('/').filter(Boolean).pop() || 'Custom Folder';
 
-    // If running in Tauri native runtime, scan disk path directly without dialog prompt!
     if (isTauri()) {
       try {
         showToast(`Scanning path natively: ${cleanPath}...`);
@@ -268,6 +291,7 @@ export default function HomePage() {
           settings.maxScanFilesLimit || 50000,
           settings.includeHiddenFiles !== false
         );
+
         if (scanResult) {
           if (scanResult.limitReached) {
             showToast(
@@ -298,7 +322,6 @@ export default function HomePage() {
       }
     }
 
-    // Check if this project already exists
     const existing = projects.find((p) => p.name.toLowerCase() === folderName.toLowerCase());
     if (existing) {
       showToast(`Selected existing project: ${existing.name}`);
@@ -306,13 +329,10 @@ export default function HomePage() {
       return;
     }
 
-    // In browser sandbox, direct string paths require opening the folder picker to read blobs.
-    // We register the name and prompt the picker
     showToast(`Registered folder path: ${folderName}. Please confirm selection in dialog.`);
     handleOpenFolderPicker();
   };
 
-  // Helper to integrate new project with duplicate matching & trash restoration
   const integrateNewProject = (
     projectName: string,
     mediaItems: MediaFileItem[],
@@ -324,17 +344,16 @@ export default function HomePage() {
     subfolders: string[],
     rootPathName?: string
   ) => {
-    // Check if this folder was in 30-day trash!
     const trashMatch = trashRecords.find(
       (t) => t.projectName.toLowerCase() === projectName.toLowerCase()
     );
+
     if (trashMatch) {
       removeTrashRecord(trashMatch.id);
       setTrashRecords((prev) => prev.filter((t) => t.id !== trashMatch.id));
       showToast(`Restored folder from 30-day trash with prior review session (${projectName})`);
     }
 
-    // Check if project already exists in active projects
     const existing = findMatchingProject(projects, projectName, mediaItems.length);
     if (existing) {
       const previousSelectionsMap = new Map(existing.items.map((i) => [i.relativePath, i.selected]));
@@ -369,11 +388,12 @@ export default function HomePage() {
 
       setProjects((prev) => prev.map((p) => (p.id === existing.id ? updatedProject : p)));
       persistProjectToIDB(updatedProject);
-      showToast(`Duplicate folder recognized! Previous selections and progress preserved (${projectName})`);
+      showToast(
+        `Duplicate folder recognized! Previous selections and progress preserved (${projectName})`
+      );
       return;
     }
 
-    // New project
     const newProject: FolderProject = {
       id: 'proj_' + Date.now(),
       name: projectName,
@@ -400,14 +420,12 @@ export default function HomePage() {
     showToast(`Loaded project with ${mediaItems.length} media items.`);
   };
 
-  // Update a project
   const handleUpdateProject = (updated: FolderProject) => {
     setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
     setActionProject((prev) => (prev && prev.id === updated.id ? updated : prev));
     persistProjectToIDB(updated);
   };
 
-  // Delete project -> Move to 30-day trash
   const handleDeleteProject = (project: FolderProject) => {
     saveTrashRecord(project);
     setTrashRecords(loadTrashRecords());
@@ -419,7 +437,6 @@ export default function HomePage() {
     showToast(`Folder moved to 30-day safety trash.`);
   };
 
-  // Restore project from 30-day trash
   const handleRestoreFromTrash = (record: TrashRecord) => {
     removeTrashRecord(record.id);
     setTrashRecords((prev) => prev.filter((t) => t.id !== record.id));
@@ -428,14 +445,12 @@ export default function HomePage() {
     showToast(`Restored "${record.projectName}" to active projects.`);
   };
 
-  // Permanent delete from trash
   const handlePermanentDelete = (recordId: string) => {
     removeTrashRecord(recordId);
     setTrashRecords((prev) => prev.filter((t) => t.id !== recordId));
     showToast('Folder permanently purged.');
   };
 
-  // Navigation handlers
   const handleStartSlideshow = (project: FolderProject, resume: boolean = true) => {
     setActiveProjectId(project.id);
     setSlideshowStartIndex(resume ? project.lastViewedIndex || 0 : 0);
@@ -452,19 +467,79 @@ export default function HomePage() {
     setIsActionOpen(true);
   };
 
-  // Undo push
   const handleUndoPush = (description: string, prevItems: MediaFileItem[]) => {
     if (!activeProjectId) return;
-    setUndoHistory((prev) => [
-      ...prev,
-      { description, projectId: activeProjectId, prevItems },
-    ]);
+    setUndoHistory((prev) => [...prev, { description, projectId: activeProjectId, prevItems }]);
   };
 
   const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
+  const currentTheme = getTheme(settings.activeThemeId, isDark);
+  const isLiquidGlass = currentTheme.id === 'theme-3-liquid-glass';
+  const isCupertino = currentTheme.id === 'theme-2-cupertino-frosted-pro';
+  const rimClass = isLiquidGlass
+    ? 'liquid-specular-rim'
+    : isCupertino
+    ? 'cupertino-vibrancy-rim'
+    : '';
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-orange-500 selection:text-white transition-colors duration-200">
+    <div
+      className={`relative min-h-screen flex flex-col font-sans transition-colors duration-200 theme-bg ${
+        isLiquidGlass
+          ? 'liquid-glass-backdrop'
+          : isCupertino
+          ? 'cupertino-frosted-backdrop'
+          : ''
+      }`}
+    >
+      {/* Ambient Optical Light Mesh for Dashboard in Cupertino & Liquid Glass */}
+      {(isLiquidGlass || isCupertino) && viewMode === 'dashboard' && (
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          {isLiquidGlass ? (
+            <>
+              <div
+                className="absolute -top-36 left-1/4 w-[650px] h-[380px] rounded-full blur-[115px] opacity-35"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(0, 210, 255, 0.55) 0%, rgba(56, 189, 248, 0.15) 60%, transparent 100%)',
+                }}
+              />
+              <div
+                className="absolute top-1/3 -right-24 w-[550px] h-[550px] rounded-full blur-[130px] opacity-25"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(0, 210, 255, 0.18) 65%, transparent 100%)',
+                }}
+              />
+              <div
+                className="absolute -bottom-32 left-10 w-[600px] h-[420px] rounded-full blur-[120px] opacity-25"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(125, 235, 255, 0.4) 0%, transparent 75%)',
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <div
+                className="absolute -top-40 left-1/3 w-[700px] h-[360px] rounded-full blur-[120px] opacity-30"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(10, 132, 255, 0.45) 0%, transparent 75%)',
+                }}
+              />
+              <div
+                className="absolute bottom-10 right-1/4 w-[600px] h-[400px] rounded-full blur-[130px] opacity-20"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(94, 92, 230, 0.4) 0%, transparent 75%)',
+                }}
+              />
+            </>
+          )}
+        </div>
+      )}
+
       {/* Hidden file input with directory support */}
       <input
         ref={folderInputRef}
@@ -477,14 +552,18 @@ export default function HomePage() {
         onChange={handleFileInputChange}
       />
 
-      {/* Global Interactive Toast Notification */}
+      {/* Global Interactive Toast Notification (Bottom Center Glass/Ice Capsule) */}
       {toastMessage && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-200">
-          <div className="px-5 py-2.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-300 dark:border-slate-700/80 shadow-2xl backdrop-blur-xl text-xs font-medium text-slate-900 dark:text-white flex items-center gap-2.5">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div
+            className={`px-5 py-2.5 theme-hud-dock text-xs font-semibold theme-text flex items-center gap-2.5 ${rimClass}`}
+          >
             <span
-              className={`w-2 h-2 rounded-full animate-pulse ${
-                settings.neonAccent === 'orange' ? 'bg-orange-500' : 'bg-emerald-500'
-              }`}
+              className="w-2.5 h-2.5 rounded-full animate-pulse shrink-0"
+              style={{
+                backgroundColor: `rgb(${currentTheme.palette.accentRgb})`,
+                boxShadow: 'var(--theme-glow)',
+              }}
             />
             <span>{toastMessage}</span>
           </div>
@@ -492,37 +571,8 @@ export default function HomePage() {
       )}
 
       {/* Conditional Rendering based on ViewMode */}
-      {viewMode === 'slideshow' && activeProject ? (
-        <SlideshowView
-          project={activeProject}
-          startIndex={slideshowStartIndex}
-          settings={settings}
-          onUpdateSettings={handleUpdateSettings}
-          onUpdateProject={handleUpdateProject}
-          onClose={() => setViewMode('gallery')}
-          onOpenGallery={() => setViewMode('gallery')}
-          onShowToast={showToast}
-        />
-      ) : viewMode === 'gallery' && activeProject ? (
-        <GalleryView
-          project={activeProject}
-          settings={settings}
-          onUpdateSettings={handleUpdateSettings}
-          onUpdateProject={handleUpdateProject}
-          onStartSlideshow={(startIdx) => {
-            setSlideshowStartIndex(startIdx);
-            setViewMode('slideshow');
-          }}
-          onClose={() => setViewMode('dashboard')}
-          onOpenActionModal={() => {
-            setActionProject(activeProject);
-            setIsActionOpen(true);
-          }}
-          onShowToast={showToast}
-        />
-      ) : (
-        <>
-          {/* Main Top Header */}
+      {viewMode === 'dashboard' || !activeProject ? (
+        <div className="relative z-10 flex-1 flex flex-col">
           <Header
             settings={settings}
             onUpdateSettings={handleUpdateSettings}
@@ -536,7 +586,6 @@ export default function HomePage() {
             isDashboard={true}
           />
 
-          {/* Main Content Area */}
           <main className="flex-1">
             <ProjectList
               projects={projects}
@@ -552,7 +601,47 @@ export default function HomePage() {
               onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
             />
           </main>
-        </>
+        </div>
+      ) : (
+        <div
+          className={`w-full min-h-screen transition-all duration-300 ${
+            viewMode === 'slideshow'
+              ? 'pointer-events-none select-none filter blur-[4px] opacity-80 scale-[0.995]'
+              : ''
+          }`}
+        >
+          <GalleryView
+            project={activeProject}
+            settings={settings}
+            onUpdateSettings={handleUpdateSettings}
+            onUpdateProject={handleUpdateProject}
+            onStartSlideshow={(startIdx) => {
+              setSlideshowStartIndex(startIdx);
+              setViewMode('slideshow');
+            }}
+            onClose={() => setViewMode('dashboard')}
+            onOpenActionModal={() => {
+              setActionProject(activeProject);
+              setIsActionOpen(true);
+            }}
+            onOpenShortcuts={() => setIsShortcutsOpen(true)}
+            onShowToast={showToast}
+          />
+        </div>
+      )}
+
+      {/* Floating Translucent Glass / Ice Slideshow Overlay */}
+      {viewMode === 'slideshow' && activeProject && (
+        <SlideshowView
+          project={activeProject}
+          startIndex={slideshowStartIndex}
+          settings={settings}
+          onUpdateSettings={handleUpdateSettings}
+          onUpdateProject={handleUpdateProject}
+          onClose={() => setViewMode('gallery')}
+          onOpenGallery={() => setViewMode('gallery')}
+          onShowToast={showToast}
+        />
       )}
 
       {/* Global Modals */}
@@ -590,14 +679,12 @@ export default function HomePage() {
         />
       )}
 
-      {/* Keyboard Shortcuts Guide Cheatsheet */}
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
         neonAccent={settings.neonAccent}
       />
 
-      {/* Manual Path Input Modal */}
       <PathInputModal
         isOpen={isPathInputOpen}
         onClose={() => setIsPathInputOpen(false)}
@@ -606,7 +693,6 @@ export default function HomePage() {
         neonAccent={settings.neonAccent}
       />
 
-      {/* Self-Test & Diagnostics Modal */}
       <DiagnosticsModal
         isOpen={isDiagnosticsOpen}
         onClose={() => setIsDiagnosticsOpen(false)}
